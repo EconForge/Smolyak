@@ -9,7 +9,7 @@ function S_n(n::Int)
     end
 
     if n == 1
-        return [0]
+        return [0.]
     end
 
     m_i = 2^(n - 1) + 1
@@ -22,15 +22,37 @@ function S_n(n::Int)
 end
 
 
-function A_n(n::Int)
-    # make a_n
-    if n < 1
-        error("DomainError: n must be positive")
-    elseif n == 1
-        return [0]
-    end
+# function A_n(n::Int)
+#     # make a_n
+#     if n < 1
+#         error("DomainError: n must be positive")
+#     elseif n == 1
+#         return [0]
+#     end
 
-    return setdiff(S_n(n), S_n(n-1))
+#     return setdiff(S_n(n), S_n(n-1))
+# end
+
+
+function A_n_prime(n::Int)
+    sn = S_n(n)
+    return sn[[2:2:size(sn, 1)]]
+end
+
+
+function A_chain(n::Int)
+    # Return an Any array of all A_n from n to 1
+    sn = S_n(n)
+    a = Any[]
+    for i=n-1:-1:2
+        #pass
+        push!(a, sn[[2:2:size(sn, 1)]])
+        sn = sn[[1:2:size(sn, 1)]]
+    end
+    # add A_2 and A_1
+    push!(a, [-1, 1])
+    push!(a, [0])
+    return a
 end
 
 
@@ -38,7 +60,7 @@ function dense_grid(d::Int, mu::Int)
 
     p_vals = [1:mu+1]
 
-    # TODO: This can probably be optimized
+    # TODO: This can probably be optimized to not be of type Any
     points = Any[]
 
     # Smolyak.find_points(self)
@@ -49,22 +71,56 @@ function dense_grid(d::Int, mu::Int)
         end
     end
 
-    p_set = Set()
-
     # Build Smolyak grid
+    p_set = Set()
 
     for elem in points
         push!(p_set, [elem...])
     end
 
-    p_set = unique(p_set)
-    n_pts = size(p_set, 1)
+    unique_pts = collect(p_set)
+    n_pts = size(unique_pts, 1)
     grid = Array(Float64, n_pts, d)
     for i=1:n_pts
-        grid[i, :] = p_set[i]
+        grid[i, :] = unique_pts[i]
     end
+
     return grid
 end
+
+
+function sparse_grid(d::Int, mu::Int)
+
+    p_vals = [1:mu+1]
+
+    # TODO: This can probably be optimized to not be of type Any
+    points = Any[]
+
+    # Smolyak.find_points(self)
+    for el in product([p_vals for i in [1:d]]...)
+        if sum(el) == d + mu
+            temp_points = map(A_n, el)
+            append!(points, [collect(product(temp_points...))...])
+        end
+    end
+
+    # Build Smolyak grid
+    p_set = Set()
+
+    for elem in points
+        push!(p_set, [elem...])
+    end
+
+    unique_pts = collect(p_set)
+    n_pts = size(unique_pts, 1)
+    grid = Array(Float64, n_pts, d)
+    for i=1:n_pts
+        grid[i, :] = unique_pts[i]
+    end
+
+    return grid
+end
+
 
 
 function plot_grid(g)
