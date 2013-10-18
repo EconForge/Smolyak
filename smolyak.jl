@@ -1,6 +1,7 @@
 using Iterators
 import PyPlot
 
+
 function S_n(n::Int)
     # Compute the set S_n. All points are extrema of Chebyshev polynomials
     if n < 1
@@ -18,8 +19,8 @@ function S_n(n::Int)
         pts[i] = abs(pts[i]) < 1e-12 ? 0.0 : pts[i]
     end
     return pts
-
 end
+
 
 function A_n(n::Int)
     # make a_n
@@ -31,8 +32,6 @@ function A_n(n::Int)
 
     return setdiff(S_n(n), S_n(n-1))
 end
-
-
 
 
 function dense_grid(d::Int, mu::Int)
@@ -65,8 +64,8 @@ function dense_grid(d::Int, mu::Int)
         grid[i, :] = p_set[i]
     end
     return grid
-
 end
+
 
 function plot_grid(g)
     if size(g, 2) == 2
@@ -79,4 +78,3 @@ function plot_grid(g)
         throw("ERROR: can only plot 2d or 3d grids")
     end
 end
-
