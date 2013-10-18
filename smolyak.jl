@@ -21,6 +21,19 @@ function S_n(n::Int)
 
 end
 
+function A_n(n::Int)
+    # make a_n
+    if n < 1
+        error("DomainError: n must be positive")
+    elseif n == 1
+        return [0]
+    end
+
+    return setdiff(S_n(n), S_n(n-1))
+end
+
+
+
 
 function dense_grid(d::Int, mu::Int)
 
