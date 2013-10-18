@@ -97,12 +97,24 @@ function sparse_grid(d::Int, mu::Int)
     points = Any[]
 
     # Smolyak.find_points(self)
+
+    # TODO: Re-write this function. The key innovation behind the disjoint
+    #       method is that we will no longer obtain duplicate points when
+    #       evaluating the tensor product. That means we just need to stack
+    #       all the A_i together.
+
+    # NOTE: There is definitely a way to use A_chain to compute all the A_n.
+    #       Then we can "stack" the points in the A_n that satisfy
+    #       d <= |i| <= d + u. We will not have to do any set operations!!
+    #       (either in constructing A_n *or* in finding unique points)
     for el in product([p_vals for i in [1:d]]...)
-        if sum(el) == d + mu
+        if d <= sum(el) <= d + mu
             temp_points = map(A_n, el)
             append!(points, [collect(product(temp_points...))...])
         end
     end
+
+    # return points
 
     # Build Smolyak grid
     p_set = Set()
