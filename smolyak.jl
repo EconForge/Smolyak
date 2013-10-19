@@ -5,6 +5,10 @@ choose(n, k) = factorial(n) / (factorial(k) * factorial(n - k))
 
 count_coef(d, mu, i) = (-1) ^ (d + mu - i) * choose(d - 1, d + mu - i)
 
+# takes the ith slice of A in the dth dimension and squeezes along d
+slice_sqz(A, d, i) = squeeze(slicedim(A, d, i), d)
+
+
 function m_i(i::Int)
     if i < 1
         error("DomainError: i must be positive")
@@ -14,6 +18,22 @@ function m_i(i::Int)
     else
         return 2^(i - 1) + 1
     end
+end
+
+
+function cheby2n(x, n::Int; kind=1)
+    # Evaluates the first n+1 Chebyshev polynomials of the 'kind' kind at x
+    # NOTE: This will only work when kind = 1 or kind = 2
+    # NOTE: We evaluate the first n+1, with the first dimension being all 1's
+    dim = size(x)
+    results = zeros(n + 1, dim...)
+    results[1, :] = 1.
+    results[2, :] = kind * x
+    for i=3:n+1
+        results[i, :] = (2 * x .* slice_sqz(results, 1, i-1) -
+                         slice_sqz(results, 1, i-2))
+    end
+    return results
 end
 
 
