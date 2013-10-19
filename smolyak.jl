@@ -5,6 +5,9 @@ choose(n, k) = factorial(n) / (factorial(k) * factorial(n - k))
 
 count_coef(d, mu, i) = (-1) ^ (d + mu - i) * choose(d - 1, d + mu - i)
 
+slice_sqz(A, d, i) = squeeze(slicedim(A, d, i), d)
+
+
 function m_i(i::Int)
     if i < 1
         error("DomainError: i must be positive")
@@ -16,8 +19,6 @@ function m_i(i::Int)
     end
 end
 
-
-slice_sqz(A, d, i) = squeeze(slicedim(A, d, i), d)
 
 function chebychev(x, n)
     # Evaluates the first n Chebyshev polynomials of the first kind at x
