@@ -18,7 +18,6 @@ from itertools import product
 import time as time
 import cProfile
 
-
 class Smoly_JMMV(object):
     """
     This class currently takes a dimension and a degree of polynomial
@@ -122,24 +121,27 @@ class Smoly_JMMV(object):
         possible_values = range(1, mu + 2)
 
         An = self._find_A_n(mu + 1)
-        self.Achain = An
+
         points = []
-        # inds = []
+        inds = []
 
-        for el in product(possible_values, repeat=d):
-            if d <= sum(el) <= d + mu:
-                temp = [An[i-1] for i in el]
-                # Save these indices that we iterate through gecause
-                # we need them for the chebyshev polynomial combination
-                # inds.append(el)
-                points.extend(list(product(*temp)))
+        # check for all indices in range we want
+        for max in range(mu+1):
+            inds.extend([v for v in product(range(1, mu+2), repeat=d) if sum(v)==max])
 
-        grid = np.vstack(points)
+        for el in inds:
+            temp = [An[i-1] for i in el]
+            # Save these indices that we iterate through gecause
+            # we need them for the chebyshev polynomial combination
+            # inds.append(el)
+            points.extend(list(product(*temp)))
+
+        grid = np.array(points)
 
         self.grid = grid
-        # self.inds = inds
 
         return self.grid
+
 
     def create_phi_grid(self):
         """
@@ -182,7 +184,6 @@ d = 12
 mu = 2
 s = Smoly_JMMV(d, mu)
 cProfile.run("s.build_sparse_grid()")
-
 
 
 
