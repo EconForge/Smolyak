@@ -60,13 +60,7 @@ class Smoly_JMMV(object):
             raise ValueError('You are trying to build a one dimensional\
                              grid.')
 
-    def build_grid(self):
-        """
-        This method builds a grid for the object
-        """
-        return None
-
-    def _find_A_n(n):
+    def _find_A_n(self, n):
         """
         This method finds all of the unidimensional disjoint sets
         that we will use to construct the grid.  It improves on
@@ -76,29 +70,27 @@ class Smoly_JMMV(object):
         we only need to calculate biggest of the S_n's to build the
         sequence of A_n's
         """
-        # n = self.n
 
         # # Start w finding the biggest Sn(We will subsequently reduce it)
-        # Sn = _find_S_n(n)
+        Sn = self._find_S_n(n)
         A_chain = []
-
-        A_chain.append([0])
-        A_chain.append([-1, 1])
 
         # Need a for loop to extract remaining elements
         for seq in xrange(2, n):
-            temp = _find_S_n(n)
             num = Sn.size
             # Need odd indices in python because indexing starts at 0
-            A_chain.append(temp[np.arange(1, num, 2)])
+            A_chain.append(Sn[np.arange(1, num, 2)])
+            Sn = Sn[np.arange(0, num, 2)]
+
+        A_chain.append([-1, 1])
+        A_chain.append([0])
 
         return A_chain
 
-    def _find_S_n(n):
+    def _find_S_n(self, n):
         """
         This method finds the element S_n for the Chebyshev Extrema
         """
-        # n = self.n
 
         if n==1:
             return np.array([0])
@@ -116,6 +108,27 @@ class Smoly_JMMV(object):
         vals[np.where(np.abs(vals) < 1e-14)] = 0.0
 
         return vals
+
+    def build_sparse_grid(self):
+        """
+        This method builds a grid for the object
+        """
+        d = self.d
+        mu = self.mu
+
+        possible_values = np.arange(d + mu)
+
+        An = self._find_A_n(d + mu).reverse()
+
+        points = []
+
+        for el in product(possible_values, repeat=d):
+            if d <= sum(el) <= d + mu:
+                temp = [An[i] for i in el]
+                points.append(list(product(*temp)))
+
+        return point
+
 
 
 
