@@ -99,8 +99,6 @@ function sparse_grid(d::Int, mu::Int)
         end
     end
 
-    return points
-
     n_pts = size(points, 1)
     grid = Array(Float64, n_pts, d)
     for i=1:n_pts
