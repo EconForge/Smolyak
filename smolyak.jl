@@ -1,14 +1,16 @@
 using Iterators
 import PyPlot
 
+
 function S_n(n::Int)
     # Compute the set S_n. All points are extrema of Chebyshev polynomials
+
     if n < 1
         error("DomainError: n must be positive")
     end
 
     if n == 1
-        return [0]
+        return [0.]
     end
 
     m_i = 2^(n - 1) + 1
@@ -18,15 +20,40 @@ function S_n(n::Int)
         pts[i] = abs(pts[i]) < 1e-12 ? 0.0 : pts[i]
     end
     return pts
+end
 
+
+function A_n(n::Int)
+    sn = S_n(n)
+    return sn[[2:2:size(sn, 1)]]
+end
+
+
+function A_chain(n::Int)
+    # Return an Any array of all A_n from n to 1 (in descending order)
+
+    sn = S_n(n)
+
+    # TODO: this might be faster if a is a dict, keys can be n
+    a = Any[]
+    for i=n-1:-1:2
+        #pass
+        push!(a, sn[[2:2:size(sn, 1)]])
+        sn = sn[[1:2:size(sn, 1)]]
+    end
+    # add A_2 and A_1
+    push!(a, [-1., 1.])
+    push!(a, [0.])
+    return a
 end
 
 
 function dense_grid(d::Int, mu::Int)
+    # Use nested Smolyak sets to construct Smolyak grid
 
     p_vals = [1:mu+1]
 
-    # TODO: This can probably be optimized
+    # TODO: This can probably be optimized to not be of type Any
     points = Any[]
 
     # Smolyak.find_points(self)
@@ -37,23 +64,51 @@ function dense_grid(d::Int, mu::Int)
         end
     end
 
-    p_set = Set()
-
     # Build Smolyak grid
+    p_set = Set()
 
     for elem in points
         push!(p_set, [elem...])
     end
 
-    p_set = unique(p_set)
-    n_pts = size(p_set, 1)
+    unique_pts = collect(p_set)
+    n_pts = size(unique_pts, 1)
     grid = Array(Float64, n_pts, d)
     for i=1:n_pts
-        grid[i, :] = p_set[i]
+        grid[i, :] = unique_pts[i]
     end
-    return grid
 
+    return grid
 end
+
+
+function sparse_grid(d::Int, mu::Int)
+    # Use disjoint Smolyak sets to construct Smolyak grid
+
+    p_vals = [1:mu + 1]
+    An = reverse(A_chain(mu + d))  # reverse so we can pull out normally below
+
+    # TODO: This can probably be optimized to not be of type Any
+    points = Any[]
+
+    # Check all the combinations of values that come from possible values
+    for el in product([p_vals for i in [1:d]]...)
+        if d <= sum(el) <= d + mu
+            temp_points = [An[i] for i in el]
+            append!(points, [collect(product(temp_points...))...])
+        end
+    end
+
+    n_pts = size(points, 1)
+    grid = Array(Float64, n_pts, d)
+    for i=1:n_pts
+        grid[i, :] = [points[i]...]
+    end
+
+    return grid
+end
+
+
 
 function plot_grid(g)
     if size(g, 2) == 2
@@ -66,4 +121,3 @@ function plot_grid(g)
         throw("ERROR: can only plot 2d or 3d grids")
     end
 end
-
