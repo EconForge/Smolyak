@@ -91,12 +91,14 @@ end
 
 function sparse_grid(d::Int, mu::Int)
 
-    p_vals = [1:mu+1]
+    # We only need to check values up to mu + 1 because each of the other
+    # (n-1) dimensions is at least 1 and they need to be bounded above by
+    # d + mu
+    p_vals = [1:mu + 1]
+    An = A_chain(mu + 1)
 
     # TODO: This can probably be optimized to not be of type Any
     points = Any[]
-
-    # Smolyak.find_points(self)
 
     # TODO: Re-write this function. The key innovation behind the disjoint
     #       method is that we will no longer obtain duplicate points when
@@ -107,30 +109,35 @@ function sparse_grid(d::Int, mu::Int)
     #       Then we can "stack" the points in the A_n that satisfy
     #       d <= |i| <= d + u. We will not have to do any set operations!!
     #       (either in constructing A_n *or* in finding unique points)
+
+    # Check all the combinations of values that come from possible values
     for el in product([p_vals for i in [1:d]]...)
         if d <= sum(el) <= d + mu
-            temp_points = map(A_n, el)
+            # We want to grab all the corresponding sets in An
+            # We pull from the end because the sets are made in reverse
+            # order.
+            temp_points = [An[end-el[i]] for i in el]
             append!(points, [collect(product(temp_points...))...])
         end
     end
 
-    # return points
+    return points
 
     # Build Smolyak grid
-    p_set = Set()
+    # p_set = Set()
 
-    for elem in points
-        push!(p_set, [elem...])
-    end
+    # for elem in points
+    #     push!(p_set, [elem...])
+    # end
 
-    unique_pts = collect(p_set)
-    n_pts = size(unique_pts, 1)
-    grid = Array(Float64, n_pts, d)
-    for i=1:n_pts
-        grid[i, :] = unique_pts[i]
-    end
+    # unique_pts = collect(p_set)
+    # n_pts = size(unique_pts, 1)
+    # grid = Array(Float64, n_pts, d)
+    # for i=1:n_pts
+    #     grid[i, :] = unique_pts[i]
+    # end
 
-    return grid
+    # return grid
 end
 
 
