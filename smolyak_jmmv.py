@@ -118,25 +118,25 @@ class Smoly_JMMV(object):
         mu = self.mu
 
         # Need to capture up to value mu + 1 so in python need mu+2
-        possible_values = np.arange(1, mu + 2)
+        possible_values = range(1, mu + 2)
 
         An = self._find_A_n(d + mu)
         self.Achain = An
         points = []
-        inds = []
+        # inds = []
 
         for el in product(possible_values, repeat=d):
             if d <= sum(el) <= d + mu:
                 temp = [An[i-1] for i in el]
                 # Save these indices that we iterate through gecause
                 # we need them for the chebyshev polynomial combination
-                inds.append(el)
+                # inds.append(el)
                 points.append(np.array(list(product(*temp))))
 
         grid = np.vstack(points)
 
         self.grid = grid
-        self.inds = inds
+        # self.inds = inds
 
         return self.grid
 
@@ -148,6 +148,10 @@ class Smoly_JMMV(object):
         mu = self.mu
         indix = self.inds
         achain = self.Achain
+
+        phi_chain = []
+        phi_chain.append(1)
+
 
         for el in indix:
             print(chebyshev.chebval(achain[0], [1]))
@@ -173,8 +177,8 @@ def check_points(d, mu):
     if abs(mu - 3) < 1e-14:
         return 1 + 8*d + 12*d*(d-1)/2. + 8*d*(d-1)*(d-2)/6.
 
-d = 3
-mu = 2
+d = 10
+mu = 3
 s = Smoly_JMMV(d, mu)
 print(s.build_sparse_grid().shape)
 print(check_points(d, mu))
