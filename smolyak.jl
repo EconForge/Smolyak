@@ -1,6 +1,21 @@
 using Iterators
 import PyPlot
 
+choose(n, k) = factorial(n) / (factorial(k) * factorial(n - k))
+
+count_coef(d, mu, i) = (-1) ^ (d + mu - i) * choose(d - 1, d + mu - i)
+
+function m_i(i::Int)
+    if i < 1
+        error("DomainError: i must be positive")
+
+    elseif i == 1
+        return 1
+    else
+        return 2^(i - 1) + 1
+    end
+end
+
 
 function S_n(n::Int)
     # Compute the set S_n. All points are extrema of Chebyshev polynomials
@@ -13,9 +28,9 @@ function S_n(n::Int)
         return [0.]
     end
 
-    m_i = 2^(n - 1) + 1
-    j = [1:m_i]
-    pts = cos(pi * (j - 1.) / (m_i - 1))::Array{Float64, 1}
+    m = m_i(n)
+    j = [1:m]
+    pts = cos(pi * (j - 1.) / (m - 1))::Array{Float64, 1}
     for i = 1:size(pts, 1)
         pts[i] = abs(pts[i]) < 1e-12 ? 0.0 : pts[i]
     end
@@ -24,6 +39,16 @@ end
 
 
 function A_n(n::Int)
+    if n < 1
+        error("DomainError: n must be positive")
+    end
+
+    if n == 1
+        return [0.]
+    elseif n == 2
+        return [-1., 1.]
+    end
+
     sn = S_n(n)
     return sn[[2:2:size(sn, 1)]]
 end
@@ -34,7 +59,6 @@ function A_chain(n::Int)
 
     sn = S_n(n)
 
-    # TODO: this might be faster if a is a dict, keys can be n
     a = Dict{Int, Array{Float64, 1}}()
     sizehint(a, n)
 
@@ -111,7 +135,6 @@ function sparse_grid(d::Int, mu::Int)
 
     return grid
 end
-
 
 
 function plot_grid(g)
