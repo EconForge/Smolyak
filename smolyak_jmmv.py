@@ -178,10 +178,11 @@ def check_points(d, mu):
     if abs(mu - 3) < 1e-14:
         return 1 + 8*d + 12*d*(d-1)/2. + 8*d*(d-1)*(d-2)/6.
 
-d = 12
+d = 3
 mu = 2
 s = Smoly_JMMV(d, mu)
-cProfile.run("s.build_sparse_grid()")
+s.build_sparse_grid()
+# cProfile.run("s.build_sparse_grid()")
 
 
 

@@ -14,9 +14,10 @@ import numpy.linalg as la
 from numpy.polynomial import chebyshev
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from itertools import product
+from itertools import product, combinations_with_replacement, permutations
 import time as time
 import cProfile
+from dolo.numeric.interpolation import smolyak as smm
 
 class Smoly_JMMV(object):
     """
@@ -74,18 +75,21 @@ class Smoly_JMMV(object):
 
         # # Start w finding the biggest Sn(We will subsequently reduce it)
         Sn = self._find_S_n(n)
-        A_chain = []
+        A_chain = {}
+        A_chain[1] = [0.]
+        A_chain[2] = [-1., 1.]
 
         # Need a for loop to extract remaining elements
-        for seq in xrange(2, n):
+        for seq in xrange(n, 2, -1):
             num = Sn.size
             # Need odd indices in python because indexing starts at 0
-            A_chain.append(Sn[range(1, num, 2)])
-            Sn = Sn[np.arange(0, num, 2)]
+            A_chain[seq] = list(Sn[range(1, num, 2)])
+            # A_chain.append(list(Sn[range(1, num, 2)]))
+            Sn = Sn[range(0, num, 2)]
 
-        A_chain.append([-1, 1])
-        A_chain.append([0])
-        A_chain.reverse()
+        # A_chain.append([-1, 1])
+        # A_chain.append([0])
+        # A_chain.reverse()
 
         return A_chain
 
@@ -95,7 +99,7 @@ class Smoly_JMMV(object):
         """
 
         if n==1:
-            return np.array([0])
+            return np.array([0.])
 
         # Apply the necessary transformation to get the nested sequence
         m_i = 2**(n-1) + 1
@@ -117,30 +121,44 @@ class Smoly_JMMV(object):
         d = self.d
         mu = self.mu
 
+        # Get An chain
+        An = self._find_A_n(mu + 1)
+
+    # def test():
         # Need to capture up to value mu + 1 so in python need mu+2
         possible_values = range(1, mu + 2)
 
-        An = self._find_A_n(mu + 1)
+        # find all (i1, i2, ... id) such that their sum is in range
+        # we want; this will cut down on later iterations
+        poss_inds = [el for el in combinations_with_replacement(possible_values, d) \
+                      if d<sum(el)<=d+mu]
 
+        # Add the d dimension 1 array so that we don't repeat it a bunch
+        # of times
+        true_inds = []
+        # This is the most costly of the calls!!!  Better way?
+        true_inds = [el for el in permutations(el) for el in poss_inds]
+        # for el in poss_inds:
+        #     true_inds.extend([me for me in permutations(el)])
+        # return true_inds
+
+        true_inds.extend([(1,)*d])
+        # cheat to kill non-unique elements
+        # There should be a better way; need unique permutation func
+        true_inds = list(set(true_inds))
         points = []
-        inds = []
 
-        # check for all indices in range we want
-        for max in range(mu+1):
-            inds.extend([v for v in product(range(1, mu+2), repeat=d) if sum(v)==max])
-
-        for el in inds:
-            temp = [An[i-1] for i in el]
+        for el in true_inds:
+            temp = [An[i] for i in el]
             # Save these indices that we iterate through gecause
             # we need them for the chebyshev polynomial combination
             # inds.append(el)
             points.extend(list(product(*temp)))
 
         grid = np.array(points)
-
         self.grid = grid
 
-        return self.grid
+        return grid
 
 
     def create_phi_grid(self):
@@ -177,13 +195,14 @@ def check_points(d, mu):
     if abs(mu - 2) < 1e-14:
         return 1 + 4*d + 4*d*(d-1)/2.
 
-    if abs(mu - 3) < 1e-14:
-        return 1 + 8*d + 12*d*(d-1)/2. + 8*d*(d-1)*(d-2)/6.
+    if abs(mu - 3) < 1e-14: return 1 + 8*d + 12*d*(d-1)/2. + 8*d*(d-1)*(d-2)/6.
 
-d = 12
+d = 10
 mu = 2
 s = Smoly_JMMV(d, mu)
+print(s.build_sparse_grid().shape, check_points(d, mu))
 cProfile.run("s.build_sparse_grid()")
+cProfile.run("smm.smolyak_grids(d, mu)")
 
 
 
