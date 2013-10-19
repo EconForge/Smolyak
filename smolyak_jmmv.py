@@ -84,6 +84,7 @@ class Smoly_JMMV(object):
 
         A_chain.append([-1, 1])
         A_chain.append([0])
+        A_chain.reverse()
 
         return A_chain
 
@@ -96,7 +97,6 @@ class Smoly_JMMV(object):
             return np.array([0])
 
         # Apply the necessary transformation to get the nested sequence
-        # m_i = 2**(i-1) + 1
         m_i = 2**(n-1) + 1
 
         # Create an array of values that will be passed in to calculate
@@ -116,18 +116,43 @@ class Smoly_JMMV(object):
         d = self.d
         mu = self.mu
 
-        possible_values = np.arange(d + mu)
+        # Need to capture up to value mu + 1 so in python need mu+2
+        possible_values = np.arange(1, mu + 2)
 
-        An = self._find_A_n(d + mu).reverse()
-
+        An = self._find_A_n(d + mu)
         points = []
 
         for el in product(possible_values, repeat=d):
             if d <= sum(el) <= d + mu:
-                temp = [An[i] for i in el]
+                temp = [An[i-1] for i in el]
                 points.append(list(product(*temp)))
 
-        return point
+        grid = []
+        # I think we lose a lot of time here.  There is a more clever
+        # way to do it, but leaving it for now.
+        for el in points:
+            for el2 in el:
+                grid.append(el2)
+
+        self.grid = np.array(grid)
+
+        return self.grid
+
+def check_points(d, mu):
+    if abs(mu - 1) < 1e-14:
+        return 2*d + 1
+
+    if abs(mu - 2) < 1e-14:
+        return 1 + 4*d + 4*d*(d-1)/2.
+
+    if abs(mu - 3) < 1e-14:
+        return 1 + 8*d + 12*d*(d-1)/2. + 8*d*(d-1)*(d-2)/6.
+
+d = 6
+mu = 3
+s = Smoly_JMMV(d, mu)
+print(s.build_sparse_grid().shape)
+print(check_points(d, mu))
 
 
 
