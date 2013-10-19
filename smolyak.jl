@@ -30,20 +30,24 @@ end
 
 
 function A_chain(n::Int)
-    # Return an Any array of all A_n from n to 1 (in descending order)
+    # Return Dict of all A_n from n to 1. Keys are n, values are arrays
 
     sn = S_n(n)
 
     # TODO: this might be faster if a is a dict, keys can be n
-    a = Any[]
-    for i=n-1:-1:2
-        #pass
-        push!(a, sn[[2:2:size(sn, 1)]])
+    a = Dict{Int, Array{Float64, 1}}()
+    sizehint(a, n)
+
+    # These are constant and don't follow the pattern.
+    a[1] = [0.]
+    a[2] = [-1., 1.]
+
+    for i=n:-1:3
+        # push!(a, sn[[2:2:size(sn, 1)]])
+        a[i] = sn[[2:2:size(sn, 1)]]
         sn = sn[[1:2:size(sn, 1)]]
     end
-    # add A_2 and A_1
-    push!(a, [-1., 1.])
-    push!(a, [0.])
+
     return a
 end
 
@@ -86,7 +90,7 @@ function sparse_grid(d::Int, mu::Int)
     # Use disjoint Smolyak sets to construct Smolyak grid
 
     p_vals = [1:mu + 1]
-    An = reverse(A_chain(mu + d))  # reverse so we can pull out normally below
+    An = A_chain(mu + d)
 
     # TODO: This can probably be optimized to not be of type Any
     points = Any[]
