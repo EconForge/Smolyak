@@ -11,6 +11,7 @@ Author: Chase Coleman
 
 import numpy as np
 import numpy.linalg as la
+from numpy.polynomial import chebyshev
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from itertools import product
@@ -82,8 +83,8 @@ class Smoly_JMMV(object):
             A_chain.append(Sn[np.arange(1, num, 2)])
             Sn = Sn[np.arange(0, num, 2)]
 
-        A_chain.append([-1, 1])
-        A_chain.append([0])
+        A_chain.append(np.array([-1, 1]))
+        A_chain.append(np.array([0]))
         A_chain.reverse()
 
         return A_chain
@@ -120,23 +121,47 @@ class Smoly_JMMV(object):
         possible_values = np.arange(1, mu + 2)
 
         An = self._find_A_n(d + mu)
+        self.Achain = An
         points = []
+        inds = []
 
         for el in product(possible_values, repeat=d):
             if d <= sum(el) <= d + mu:
                 temp = [An[i-1] for i in el]
-                points.append(list(product(*temp)))
+                # Save these indices that we iterate through gecause
+                # we need them for the chebyshev polynomial combination
+                inds.append(el)
+                points.append(np.array(list(product(*temp))))
 
-        grid = []
-        # I think we lose a lot of time here.  There is a more clever
-        # way to do it, but leaving it for now.
-        for el in points:
-            for el2 in el:
-                grid.append(el2)
+        grid = np.vstack(points)
 
-        self.grid = np.array(grid)
+        self.grid = grid
+        self.inds = inds
 
         return self.grid
+
+    def create_phi_grid(self):
+        """
+        Makes a matrix as presented in section 3 of JMMV paper.
+        """
+        d = self.d
+        mu = self.mu
+        indix = self.inds
+        achain = self.Achain
+
+        for el in indix:
+            print(chebyshev.chebval(achain[0], [1]))
+
+
+
+
+
+    def cheb_poly_seq(self):
+        """
+        Makes a sequence of chebyshev polynomials evaluated at x
+        """
+
+
 
 def check_points(d, mu):
     if abs(mu - 1) < 1e-14:
@@ -148,8 +173,8 @@ def check_points(d, mu):
     if abs(mu - 3) < 1e-14:
         return 1 + 8*d + 12*d*(d-1)/2. + 8*d*(d-1)*(d-2)/6.
 
-d = 6
-mu = 3
+d = 3
+mu = 2
 s = Smoly_JMMV(d, mu)
 print(s.build_sparse_grid().shape)
 print(check_points(d, mu))
