@@ -5,6 +5,7 @@ choose(n, k) = factorial(n) / (factorial(k) * factorial(n - k))
 
 count_coef(d, mu, i) = (-1) ^ (d + mu - i) * choose(d - 1, d + mu - i)
 
+# takes the ith slice of A in the dth dimension and squeezes along d
 slice_sqz(A, d, i) = squeeze(slicedim(A, d, i), d)
 
 
@@ -32,16 +33,6 @@ function chebychev(x, n)
     end
     return results
 end
-
-# def chebychev(x, n):
-#     # computes the chebychev polynomials of the first kind
-#     dim = x.shape
-#     results = numpy.zeros((n+1,) + dim)
-#     results[0,...] = numpy.ones(dim)
-#     results[1,...] = x
-#     for i in range(2,n+1):
-#         results[i,...] = 2 * x * results[i-1,...] - results[i-2,...]
-#     return results
 
 
 function S_n(n::Int)
