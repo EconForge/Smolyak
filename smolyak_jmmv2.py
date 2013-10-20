@@ -18,6 +18,7 @@ from itertools import product, combinations_with_replacement, permutations
 import time as time
 import cProfile
 from dolo.numeric.interpolation import smolyak as smm
+from permute import *
 
 class Smoly_JMMV(object):
     """
@@ -83,7 +84,7 @@ class Smoly_JMMV(object):
         for seq in xrange(n, 2, -1):
             num = Sn.size
             # Need odd indices in python because indexing starts at 0
-            A_chain[seq] = list(Sn[range(1, num, 2)])
+            A_chain[seq] = tuple(Sn[range(1, num, 2)])
             # A_chain.append(list(Sn[range(1, num, 2)]))
             Sn = Sn[range(0, num, 2)]
 
@@ -133,24 +134,26 @@ class Smoly_JMMV(object):
         poss_inds = [el for el in combinations_with_replacement(possible_values, d) \
                       if d<sum(el)<=d+mu]
 
+        # This is the most costly of the calls!!!  Better way?
+        true_inds = [[el for el in permute(list(val))][1:] for val in poss_inds]
+
+
         # Add the d dimension 1 array so that we don't repeat it a bunch
         # of times
-        true_inds = []
-        # This is the most costly of the calls!!!  Better way?
-        true_inds = [el for el in permutations(el) for el in poss_inds]
-        # for el in poss_inds:
-        #     true_inds.extend([me for me in permutations(el)])
-        # return true_inds
+        true_inds.extend([[1]*d])
 
-        true_inds.extend([(1,)*d])
         # cheat to kill non-unique elements
         # There should be a better way; need unique permutation func
-        true_inds = list(set(true_inds))
+        # true_inds = list(set(true_inds))
+        tinds = np.vstack(true_inds)
+
+        # return true_inds
+
         points = []
 
-        for el in true_inds:
+        for el in tinds:
             temp = [An[i] for i in el]
-            # Save these indices that we iterate through gecause
+            # Save these indices that we iterate through because
             # we need them for the chebyshev polynomial combination
             # inds.append(el)
             points.extend(list(product(*temp)))
@@ -197,12 +200,12 @@ def check_points(d, mu):
 
     if abs(mu - 3) < 1e-14: return 1 + 8*d + 12*d*(d-1)/2. + 8*d*(d-1)*(d-2)/6.
 
-d = 10
-mu = 2
+d = 30
+mu = 3
 s = Smoly_JMMV(d, mu)
 print(s.build_sparse_grid().shape, check_points(d, mu))
 cProfile.run("s.build_sparse_grid()")
-cProfile.run("smm.smolyak_grids(d, mu)")
+# cProfile.run("smm.smolyak_grids(d, mu)")
 
 
 
