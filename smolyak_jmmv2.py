@@ -20,7 +20,7 @@ import cProfile
 from dolo.numeric.interpolation import smolyak as smm
 from permute import *
 
-class Smoly_JMMV(object):
+class Smoly_grid(object):
     """
     This class currently takes a dimension and a degree of polynomial
     and builds the Smolyak Sparse grid.  We base this on the work by
@@ -125,7 +125,6 @@ class Smoly_JMMV(object):
         # Get An chain
         An = self._find_A_n(mu + 1)
 
-    # def test():
         # Need to capture up to value mu + 1 so in python need mu+2
         possible_values = range(1, mu + 2)
 
@@ -134,20 +133,13 @@ class Smoly_JMMV(object):
         poss_inds = [el for el in combinations_with_replacement(possible_values, d) \
                       if d<sum(el)<=d+mu]
 
-        # This is the most costly of the calls!!!  Better way?
         true_inds = [[el for el in permute(list(val))][1:] for val in poss_inds]
-
 
         # Add the d dimension 1 array so that we don't repeat it a bunch
         # of times
         true_inds.extend([[1]*d])
 
-        # cheat to kill non-unique elements
-        # There should be a better way; need unique permutation func
-        # true_inds = list(set(true_inds))
         tinds = np.vstack(true_inds)
-
-        # return true_inds
 
         points = []
 
@@ -200,9 +192,9 @@ def check_points(d, mu):
 
     if abs(mu - 3) < 1e-14: return 1 + 8*d + 12*d*(d-1)/2. + 8*d*(d-1)*(d-2)/6.
 
-d = 30
+d = 35
 mu = 3
-s = Smoly_JMMV(d, mu)
+s = Smoly_grid(d, mu)
 print(s.build_sparse_grid().shape, check_points(d, mu))
 cProfile.run("s.build_sparse_grid()")
 # cProfile.run("smm.smolyak_grids(d, mu)")
