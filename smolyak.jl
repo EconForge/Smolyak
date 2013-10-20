@@ -1,4 +1,5 @@
 using Iterators
+using Cartesian
 import PyPlot
 
 choose(n, k) = factorial(n) / (factorial(k) * factorial(n - k))
@@ -130,28 +131,47 @@ function dense_grid(d::Int, mu::Int)
 end
 
 
+function num_grid_pts(d::Int, mu::Int)
+
+    if mu == 1
+        return int(2 * s - 1)
+    elseif mu == 2
+        return int(1 + 4*d + 4*d*(d-1)/2)
+    else
+        return int(1 + 8*d + 12*d*(d-1)/2 + 8*d*(d-1)*(d-2)/6)
+    end
+
+end
+
 function sparse_grid(d::Int, mu::Int)
     # Use disjoint Smolyak sets to construct Smolyak grid
 
-    p_vals = [1:mu + 1]
+    p_vals = ones(Int64, d)*(mu+1)
     An = A_chain(mu + d)
 
     # TODO: This can probably be optimized to not be of type Any
     points = Any[]
 
-    # Check all the combinations of values that come from possible values
-    for el in product([p_vals for i in [1:d]]...)
+    n_pts = num_grid_pts(d, mu)::Int
+    grid = Array(Float64, n_pts, d)
+    n = 1
+
+    @forcartesian el p_vals begin
         if d <= sum(el) <= d + mu
             temp_points = [An[i] for i in el]
-            append!(points, [collect(product(temp_points...))...])
+            for pt in product(temp_points...)
+                grid[n, :] = [pt...]
+                n += 1
+            end
+            # append!(points, [collect(product(temp_points...))...])
         end
     end
 
-    n_pts = size(points, 1)
-    grid = Array(Float64, n_pts, d)
-    for i=1:n_pts
-        grid[i, :] = [points[i]...]
-    end
+    # n_pts = size(points, 1)::Int
+    # grid = Array(Float64, n_pts, d)
+    # for i=1:n_pts
+    #     grid[i, :] = [points[i]...]
+    # end
 
     return grid
 end
