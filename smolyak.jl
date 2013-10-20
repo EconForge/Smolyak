@@ -150,16 +150,14 @@ function sparse_grid(d::Int, mu::Int)
     An = A_chain(mu + d)
 
     # TODO: This can probably be optimized to not be of type Any
-    points = Any[]
+    # points = Any[]
 
-    n_pts = num_grid_pts(d, mu)::Int
-    grid = Array(Float64, n_pts, d)
+    grid = Array(Float64, num_grid_pts(d, mu), d)
     n = 1
 
     @forcartesian el p_vals begin
         if d <= sum(el) <= d + mu
-            temp_points = [An[i] for i in el]
-            for pt in product(temp_points...)
+            for pt in product([An[i] for i in el]...)
                 grid[n, :] = [pt...]
                 n += 1
             end
