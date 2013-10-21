@@ -18,7 +18,7 @@ from itertools import product, combinations_with_replacement, permutations
 import time as time
 import cProfile
 from dolo.numeric.interpolation import smolyak as smm
-from permute import *
+
 
 class Smoly_grid(object):
     """
@@ -181,6 +181,41 @@ class Smoly_grid(object):
         Makes a sequence of chebyshev polynomials evaluated at x
         """
 
+def permute(a):
+    """
+    Creates all unique combinations of a list a that is passed in.
+    Function is based off of a function written by John Lettman:
+    TCHS Computer Information Systems.  My thanks to him.
+    """
+
+    # Initialize the iterator variable and other variables
+    i = 0
+    first = 0
+    alen = len(a)
+
+    while(True):
+        i = alen - 1
+
+        while(True):
+            i -= 1 # i--
+
+            if(a[i] < a[(i + 1)]):
+                j = alen - 1
+
+                while(not (a[i] < a[j])): j -= 1 # j--
+
+                a[i], a[j] = a[j], a[i] # swap(a[j], a[i])
+                t = a[(i + 1):alen]
+                t.reverse()
+                a[(i + 1):alen] = t
+
+                yield list(a)
+
+                break # next.
+
+        if(i == first):
+            # End, we technically can't further permute this list.
+            return
 
 
 def check_points(d, mu):
@@ -192,12 +227,12 @@ def check_points(d, mu):
 
     if abs(mu - 3) < 1e-14: return 1 + 8*d + 12*d*(d-1)/2. + 8*d*(d-1)*(d-2)/6.
 
-d = 35
+d = 30
 mu = 3
 s = Smoly_grid(d, mu)
 print(s.build_sparse_grid().shape, check_points(d, mu))
 cProfile.run("s.build_sparse_grid()")
-# cProfile.run("smm.smolyak_grids(d, mu)")
+cProfile.run("smm.smolyak_grids(d, mu)")
 
 
 
