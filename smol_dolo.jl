@@ -6,6 +6,7 @@ function cheb_extrema(n::Int)
 end
 
 function my_repeat(a, n)
+    # mimics numpy.repeat
     m = size(a, 1)
     out = Array(eltype(a), n * m)
     out[1:n] = a[1]
@@ -22,24 +23,16 @@ function cartesian(arrs; out=None)
     n = prod([size(i, 1) for i in arrs])::Int
 
     if is(out, None)
-        println("HERE!")
-        # out = Array(Float64, n, length(arrs))
-        out = zeros(n, length(arrs))
+        out = Array(dtype, n, length(arrs))
     end
 
     m = int(n / size(arrs[1], 1))
     out[:, 1] = my_repeat(arrs[1], m)
-    println("OUTSIDE LOOP: out =\n$out\n")
 
     if length(arrs[2:]) > 0
-        cartesian(arrs[2:], out=out[1:m, 2:])
-        called = called + 1
-        println("called = $called")
-        println("Above LOOP: out =\n$out\n")
+        out_end = size(out, 2)
+        cartesian(arrs[2:], out=sub(out, 1:m, 2:out_end))
         for j = 1:size(arrs[1], 1)-1
-            println("j = $j, m = $m")
-            println("(j*m + 1):(j+1)*m = \n$([(j*m + 1):(j+1)*m])")
-            println("out = \n$out")
             out[(j*m + 1):(j+1)*m, 2:] = out[1:m, 2:]
         end
     end

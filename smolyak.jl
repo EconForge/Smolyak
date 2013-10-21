@@ -207,6 +207,8 @@ function sparse_grid(d::Int, mu::Int)
                 grid[n, :] = [pt...]
                 n += 1
             end
+            # NOTE: The line below is the equiv of the for loop above, but will
+            #       always work, even when mu > 3
             # append!(points, [collect(product(temp_points...))...])
         end
     end

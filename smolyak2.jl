@@ -131,15 +131,15 @@ function plot_grid(g)
     elseif size(g, 2) == 3
         PyPlot.scatter3D(g[:, 1], g[:, 2], g[:, 3], "b.")
     else
-        throw("ERROR: can only plot 2d or 3d grids")
+        error("ERROR: can only plot 2d or 3d grids")
     end
 end
 
 
 function pmute(a)
+    # Return all unique permutations of the vector a
 
     # a needs to be a vector when you pass it in
-
 
     sort(a)
     # Skipping a lot of what was done in original permute.py
@@ -149,13 +149,12 @@ function pmute(a)
     first = 1
     alen = length(a)
 
-    ## "alen" could also be used for the reference to the last element.
-
     while true
         i = alen
         while true
-            i -= 1 # i--
+            i -= 1
 
+            # Need to do short-circuit evaluation here to avoid case where i=0
             if i > 0 && a[i] < a[(i + 1)]
                 j = alen
                 while a[i] >= a[j]
@@ -165,6 +164,7 @@ function pmute(a)
                 t = a[(i + 1):end]
                 reverse!(t)
                 a[(i + 1):end] = t
+
                 # Output current.
                 produce(a)
 
@@ -172,11 +172,8 @@ function pmute(a)
             end
 
             if i == first
-                # Array of two, 2! = 2.
-                # Best solution: reverse, add to orig, done.
                 return
-                end
+            end
         end
     end
-
 end
