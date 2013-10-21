@@ -1,5 +1,5 @@
 using Iterators
-import PyPlot
+# import PyPlot
 
 choose(n, k) = factorial(n) / (factorial(k) * factorial(n - k))
 
@@ -152,18 +152,19 @@ function pmute(a)
     ## "alen" could also be used for the reference to the last element.
 
     while true
-        i = alen - 1
+        i = alen
         while true
             i -= 1 # i--
-            if a[i] < a[(i + 1)]
-                j = alen - 1
+
+            if i > 0 && a[i] < a[(i + 1)]
+                j = alen
                 while a[i] >= a[j]
                     j -= 1 # j--
                 end
                 a[i], a[j] = a[j], a[i] # swap(a[j], a[i])
-                t = a[(i + 1):alen]
+                t = a[(i + 1):end]
                 reverse!(t)
-                a[(i + 1):alen] = t
+                a[(i + 1):end] = t
                 # Output current.
                 produce(a)
 
@@ -173,15 +174,9 @@ function pmute(a)
             if i == first
                 # Array of two, 2! = 2.
                 # Best solution: reverse, add to orig, done.
-                reverse!(a)
-
-                produce(a)
+                return
                 end
         end
     end
 
-                # End, we technically can't further permute this list.
-                return
 end
-
-# Julia does yield x by produce(x)
