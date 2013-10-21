@@ -2,12 +2,58 @@ using Iterators
 using Cartesian
 import PyPlot
 
+# TODO: move these first 4 functions to a utility file.
+#       They don't really belong here
+
 choose(n, k) = factorial(n) / (factorial(k) * factorial(n - k))
 
 count_coef(d, mu, i) = (-1) ^ (d + mu - i) * choose(d - 1, d + mu - i)
 
 # takes the ith slice of A in the dth dimension and squeezes along d
 slice_sqz(A, d, i) = squeeze(slicedim(A, d, i), d)
+
+
+function pmute(a)
+    # Return all unique permutations of the vector a
+
+    # a needs to be a vector when you pass it in
+
+    sort(a)
+    # Skipping a lot of what was done in original permute.py
+
+    # Line 103
+    i = 0
+    first = 1
+    alen = length(a)
+
+    while true
+        i = alen
+        while true
+            i -= 1
+
+            # Need to do short-circuit evaluation here to avoid case where i=0
+            if i > 0 && a[i] < a[(i + 1)]
+                j = alen
+                while a[i] >= a[j]
+                    j -= 1 # j--
+                end
+                a[i], a[j] = a[j], a[i] # swap(a[j], a[i])
+                t = a[(i + 1):end]
+                reverse!(t)
+                a[(i + 1):end] = t
+
+                # Output current.
+                produce(a)
+
+                break # next.
+            end
+
+            if i == first
+                return
+            end
+        end
+    end
+end
 
 
 function m_i(i::Int)
