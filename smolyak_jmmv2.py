@@ -17,7 +17,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from itertools import product, combinations_with_replacement, permutations
 import time as time
 import cProfile
-from dolo.numeric.interpolation import smolyak as smm
+# from dolo.numeric.interpolation import smolyak as smm
 
 
 class Smoly_grid(object):
@@ -133,7 +133,7 @@ class Smoly_grid(object):
         poss_inds = [el for el in combinations_with_replacement(possible_values, d) \
                       if d<sum(el)<=d+mu]
 
-        true_inds = [[el for el in permute(list(val))][1:] for val in poss_inds]
+        true_inds = [[el for el in permute(list(val))] for val in poss_inds]
 
         # Add the d dimension 1 array so that we don't repeat it a bunch
         # of times
@@ -213,9 +213,11 @@ def permute(a):
 
                 break # next.
 
-        if(i == first):
-            # End, we technically can't further permute this list.
-            return
+            if(i == first):
+                a.reverse()
+                yield list(a)
+                # End, we technically can't further permute this list.
+                return
 
 
 def check_points(d, mu):
@@ -227,12 +229,12 @@ def check_points(d, mu):
 
     if abs(mu - 3) < 1e-14: return 1 + 8*d + 12*d*(d-1)/2. + 8*d*(d-1)*(d-2)/6.
 
-d = 30
+d = 3
 mu = 3
 s = Smoly_grid(d, mu)
 print(s.build_sparse_grid().shape, check_points(d, mu))
 cProfile.run("s.build_sparse_grid()")
-cProfile.run("smm.smolyak_grids(d, mu)")
+# cProfile.run("smm.smolyak_grids(d, mu)")
 
 
 
