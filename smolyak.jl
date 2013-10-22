@@ -223,6 +223,55 @@ function sparse_grid(d::Int, mu::Int)
 end
 
 
+function s_grid2(d::Int, mu::Int)
+    # Use disjoint Smolyak sets to construct Smolyak grid
+
+    p_vals = [1:mu + 1]
+    An = A_chain(mu + 1)
+
+    poss_inds = cell(1)
+    for el in combinations(p_vals, d)
+        if d < sum(el) <= d + mu
+            push!(poss_inds, el)
+        end
+    end
+
+    poss_inds = poss_inds[2:]
+
+    true_inds = cell(1)
+
+    for val in poss_inds
+        for el in Task(()->pmute(el))
+            push!(true_inds, el)
+        end
+    end
+
+
+    # true_inds = [[el for el in pmute(collect(val))][2:] for val in poss_inds]
+
+    append!(true_inds, ones(Int64, d))
+
+    # TODO: This can probably be optimized to not be of type Any
+    points = Any[]
+
+    @forcartesian el p_vals begin
+        if d <= sum(el) <= d + mu
+            # NOTE: The line below is the equiv of the for loop above, but will
+            #       always work, even when mu > 3
+            append!(points, [collect(product(temp_points...))...])
+        end
+    end
+
+    n_pts = size(points, 1)::Int
+    grid = Array(Float64, n_pts, d)
+    for i=1:n_pts
+        grid[i, :] = [points[i]...]
+    end
+
+    return grid
+end
+
+
 function plot_grid(g)
     if size(g, 2) == 2
         PyPlot.plot(g[:, 1], g[:, 2], "b.")
