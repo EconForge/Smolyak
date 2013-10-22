@@ -1,5 +1,7 @@
 # http://stackoverflow.com/questions/1208118/using-numpy-to-build-an-array-of-all-combinations-of-two-arrays
 
+using Cartesian
+
 function cheb_extrema(n::Int)
     j = [1:n]
     return cos(pi * (j -1) / (n - 1))
@@ -38,6 +40,22 @@ function cartesian(arrs; out=None)
     end
 
     return out
+end
+
+
+function cartprod(arrs,
+                  out=Array(eltype(arrs[1]),
+                            prod([length(a) for a in arrs]),
+                            length(arrs)))
+    sz = Int[length(a) for a in arrs]
+    narrs = length(arrs)
+    @forcartesian I sz begin
+        k = sub2ind(sz, I)
+        for i = 1:narrs
+            out[k,i] = arrs[i][I[i]]
+        end
+    end
+    out
 end
 
 
