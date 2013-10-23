@@ -1,9 +1,9 @@
 using Iterators
 using Cartesian
-import PyPlot
-using util
+# import PyPlot
+reload("util")
 
-count_coef(d, mu, i) = (-1) ^ (d + mu - i) * choose(d - 1, d + mu - i)
+counting_coef(d, mu, i) = (-1) ^ (d + mu - i) * choose(d - 1, d + mu - i)
 
 
 function num_grid_pts(d::Int, mu::Int)
@@ -151,7 +151,7 @@ function sparse_grid(d::Int, mu::Int)
 
     @forcartesian el p_vals begin
         if d <= sum(el) <= d + mu
-            push!(points, cartesian([An[i] for i in el]))
+            push!(points, cartprod([An[i] for i in el]))
         end
     end
 
@@ -217,48 +217,39 @@ function s_grid2(d::Int, mu::Int)
 
     # NOTE: I think we can replace Task(()->pmute(el)) with
     #       permutations(el), maybe not... didn't have time to test...
+
     # Reply: I don't think we can.  It doesn't look like permutations(el)
     # only returned the unique permutations.  Same problem I ran into with
     # Python version.  Also, it should probably be pmute/permutations(val) not
     # el.  unique() was a way around needing pmute
 
-    true_inds = cell(1)
+    true_inds = Any[ones(Int64, d)]
     for val in poss_inds
-        for el in unique(permutations(val))# Task(()->pmute(el))
+        # println("val = $(val...)")
+        for el in Task(()->pmute(val))
+            # println("el = $(el...)")
             push!(true_inds, el)
         end
     end
 
-    # true_inds = [[el for el in pmute(collect(val))][2:] for val in poss_inds]
+    # true_inds = [[el for el in Task(()->pmute(collect(val)))][2:] for val in poss_inds]
+    # push!(true_inds, ones(Int64, d))
 
-    push!(true_inds, ones(Int64, d))
 
-    true_inds = true_inds[2:]
+    # push!(true_inds, ones(Int64, d))
 
-    # TODO: This can probably be optimized to not be of type Any
-    points = Any[]
+    # true_inds = true_inds[2:]
 
-    #------------------------------------------------------#
-    # PICK UP HERE WHOEVER COMES NEXT
-    #------------------------------------------------------#
-    # for ind in true_inds
-    #     temp = [An[i] for i in ind]
-    #     push!(points, cartprod(temp))
+    # true_inds = Any[ones(Int64, d)]
+    # for val in poss_inds
+    #     for el in unique(permutations(val))
+    #         push!(true_inds, el)
+    #     end
     # end
 
-    @forcartesian el p_vals begin
-        if d <= sum(el) <= d + mu
-            append!(points, [collect(product(temp_points...))...])
-        end
-    end
+    # true_inds = [[el for el in pmute(collect(val))][2:] for val in poss_inds]
 
-    n_pts = size(points, 1)::Int
-    grid = Array(Float64, n_pts, d)
-    for i=1:n_pts
-        grid[i, :] = [points[i]...]
-    end
-
-    return grid
+    return vcat([ cartprod([An[i] for i in el]) for el in true_inds]...)
 end
 
 # Profile results for   different functions
@@ -267,14 +258,14 @@ end
 # [2,]      "s_grid1(15, 2)"     3.44604      1.0           10
 
 
-function plot_grid(g)
-    if size(g, 2) == 2
-        PyPlot.plot(g[:, 1], g[:, 2], "b.")
-        PyPlot.xlim((-1.5, 1.5))
-        PyPlot.ylim((-1.5, 1.5))
-    elseif size(g, 2) == 3
-        PyPlot.scatter3D(g[:, 1], g[:, 2], g[:, 3], "b.")
-    else
-        throw("ERROR: can only plot 2d or 3d grids")
-    end
-end
+# function plot_grid(g)
+#     if size(g, 2) == 2
+#         PyPlot.plot(g[:, 1], g[:, 2], "b.")
+#         PyPlot.xlim((-1.5, 1.5))
+#         PyPlot.ylim((-1.5, 1.5))
+#     elseif size(g, 2) == 3
+#         PyPlot.scatter3D(g[:, 1], g[:, 2], g[:, 3], "b.")
+#     else
+#         throw("ERROR: can only plot 2d or 3d grids")
+#     end
+# end

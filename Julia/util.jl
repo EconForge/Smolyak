@@ -1,8 +1,8 @@
-module util
+# module util
 
 import Cartesian
 
-export choose, slice_sqz, pmute, cartprod, cartesian, comb_with_replacement
+# export choose, slice_sqz, pmute, cartprod, cartesian, comb_with_replacement
 
 choose(n, k) = factorial(n) / (factorial(k) * factorial(n - k))
 
@@ -15,10 +15,11 @@ function pmute(a)
 
     # a needs to be a vector when you pass it in
 
-    sort(a)
-    # Skipping a lot of what was done in original permute.py
+    sort!(a)
 
-    # Line 103
+    # produce(a)  # we do this below.
+
+    # just initializing here so these are available in all `while` scopes
     i = 0
     first = 1
     alen = length(a)
@@ -28,8 +29,7 @@ function pmute(a)
         while true
             i -= 1
 
-            # Need to do short-circuit evaluation here to avoid case where i=0
-            if a[i] < a[(i + 1)]
+            if a[i] < a[i + 1]
                 j = alen
                 while a[i] >= a[j]
                     j -= 1 # j--
@@ -46,6 +46,8 @@ function pmute(a)
             end
 
             if i == first
+                reverse!(a)
+                produce(a)
                 return
             end
         end
@@ -137,4 +139,4 @@ function comb_with_replacement(itr, r::Int)
 end
 
 
-end # module
+# end # module
