@@ -210,44 +210,16 @@ function s_grid2(d::Int, mu::Int)
         end
     end
 
+    # cell(1) gives undefined reference in first slot. We remove it here
     poss_inds = poss_inds[2:]
 
-    # TODO: Chase pick up here. I think the poss_inds is correct
-    #       (at least I tested it for (3, 2)) ((Proof by single case. QED))
-
-    # NOTE: I think we can replace Task(()->pmute(el)) with
-    #       permutations(el), maybe not... didn't have time to test...
-
-    # Reply: I don't think we can.  It doesn't look like permutations(el)
-    # only returned the unique permutations.  Same problem I ran into with
-    # Python version.  Also, it should probably be pmute/permutations(val) not
-    # el.  unique() was a way around needing pmute
-
+    # TOOD: The bug is here!!! (with using pmute)
     true_inds = Any[ones(Int64, d)]
     for val in poss_inds
-        # println("val = $(val...)")
         for el in Task(()->pmute(val))
-            # println("el = $(el...)")
             push!(true_inds, el)
         end
     end
-
-    # true_inds = [[el for el in Task(()->pmute(collect(val)))][2:] for val in poss_inds]
-    # push!(true_inds, ones(Int64, d))
-
-
-    # push!(true_inds, ones(Int64, d))
-
-    # true_inds = true_inds[2:]
-
-    # true_inds = Any[ones(Int64, d)]
-    # for val in poss_inds
-    #     for el in unique(permutations(val))
-    #         push!(true_inds, el)
-    #     end
-    # end
-
-    # true_inds = [[el for el in pmute(collect(val))][2:] for val in poss_inds]
 
     return vcat([ cartprod([An[i] for i in el]) for el in true_inds]...)
 end

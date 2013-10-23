@@ -17,7 +17,7 @@ function pmute(a)
 
     sort!(a)
 
-    # produce(a)  # we do this below.
+    # produce(a)  # we do this below, just before returning
 
     # just initializing here so these are available in all `while` scopes
     i = 0
