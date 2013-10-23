@@ -1,12 +1,21 @@
 using Iterators
+using Cartesian
 import PyPlot
-
-choose(n, k) = factorial(n) / (factorial(k) * factorial(n - k))
+using util
 
 count_coef(d, mu, i) = (-1) ^ (d + mu - i) * choose(d - 1, d + mu - i)
 
-# takes the ith slice of A in the dth dimension and squeezes along d
-slice_sqz(A, d, i) = squeeze(slicedim(A, d, i), d)
+
+function num_grid_pts(d::Int, mu::Int)
+
+    if mu == 1
+        return int(2 * s - 1)
+    elseif mu == 2
+        return int(1 + 4*d + 4*d*(d-1)/2)
+    else
+        return int(1 + 8*d + 12*d*(d-1)/2 + 8*d*(d-1)*(d-2)/6)
+    end
+end
 
 
 function m_i(i::Int)
@@ -130,24 +139,120 @@ function dense_grid(d::Int, mu::Int)
 end
 
 
+# This version only works for all mu
 function sparse_grid(d::Int, mu::Int)
     # Use disjoint Smolyak sets to construct Smolyak grid
 
-    p_vals = [1:mu + 1]
+    p_vals = ones(Int64, d)*(mu+1)
     An = A_chain(mu + d)
+
+    # TODO: This can probably be optimized to not be of type Any
+    points = cell(1)
+
+    @forcartesian el p_vals begin
+        if d <= sum(el) <= d + mu
+            push!(points, cartesian([An[i] for i in el]))
+        end
+    end
+
+    grid = vcat(points[2:]...)
+
+    return grid
+end
+
+
+# This version only works for mu <= 3
+function s_grid1(d::Int, mu::Int)
+    # Use disjoint Smolyak sets to construct Smolyak grid
+
+    p_vals = ones(Int64, d)*(mu+1)
+    An = A_chain(mu + d)
+
+    # TODO: This can probably be optimized to not be of type Any
+    # points = Any[]
+
+    grid = Array(Float64, num_grid_pts(d, mu), d)
+    n = 1
+
+    @forcartesian el p_vals begin
+        if d <= sum(el) <= d + mu
+            for pt in product([An[i] for i in el]...)
+                grid[n, :] = [pt...]
+                n += 1
+            end
+            # NOTE: The line below is the equiv of the for loop above, but will
+            #       always work, even when mu > 3
+            # append!(points, [collect(product(temp_points...))...])
+        end
+    end
+
+    # n_pts = size(points, 1)::Int
+    # grid = Array(Float64, n_pts, d)
+    # for i=1:n_pts
+    #     grid[i, :] = [points[i]...]
+    # end
+
+    return grid
+end
+
+# TODO: Still not working
+function s_grid2(d::Int, mu::Int)
+    # Use disjoint Smolyak sets to construct Smolyak grid
+
+    p_vals = [1:mu + 1]
+    An = A_chain(mu + 1)
+
+    poss_inds = cell(1)
+
+    for el in Task(()-> comb_with_replacement(p_vals, d))
+        if d < sum(el) <= d + mu
+            push!(poss_inds, el)
+        end
+    end
+
+    poss_inds = poss_inds[2:]
+
+    # TODO: Chase pick up here. I think the poss_inds is correct
+    #       (at least I tested it for (3, 2)) ((Proof by single case. QED))
+
+    # NOTE: I think we can replace Task(()->pmute(el)) with
+    #       permutations(el), maybe not... didn't have time to test...
+    # Reply: I don't think we can.  It doesn't look like permutations(el)
+    # only returned the unique permutations.  Same problem I ran into with
+    # Python version.  Also, it should probably be pmute/permutations(val) not
+    # el.  unique() was a way around needing pmute
+
+    true_inds = cell(1)
+    for val in poss_inds
+        for el in unique(permutations(val))# Task(()->pmute(el))
+            push!(true_inds, el)
+        end
+    end
+
+    # true_inds = [[el for el in pmute(collect(val))][2:] for val in poss_inds]
+
+    push!(true_inds, ones(Int64, d))
+
+    true_inds = true_inds[2:]
 
     # TODO: This can probably be optimized to not be of type Any
     points = Any[]
 
-    # Check all the combinations of values that come from possible values
-    for el in product([p_vals for i in [1:d]]...)
+    #------------------------------------------------------#
+    # PICK UP HERE WHOEVER COMES NEXT
+    #------------------------------------------------------#
+    # for ind in true_inds
+    #     temp = [An[i] for i in ind]
+    #     push!(points, cartprod(temp))
+    # end
+
+    @forcartesian el p_vals begin
         if d <= sum(el) <= d + mu
-            temp_points = [An[i] for i in el]
             append!(points, [collect(product(temp_points...))...])
         end
     end
 
-    n_pts = size(points, 1)
+    n_pts = size(points, 1)::Int
     grid = Array(Float64, n_pts, d)
     for i=1:n_pts
         grid[i, :] = [points[i]...]
@@ -155,6 +260,11 @@ function sparse_grid(d::Int, mu::Int)
 
     return grid
 end
+
+# Profile results for   different functions
+#            Function            Elapsed Relative Replications
+# [1,]      "sparse_grid(15, 2)" 3.50408  1.01684           10
+# [2,]      "s_grid1(15, 2)"     3.44604      1.0           10
 
 
 function plot_grid(g)
