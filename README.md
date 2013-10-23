@@ -1,4 +1,4 @@
 Smolyak.jl
 ==========
 
-Standard and efficient implementations of Smolyak's algorithm for function approxmation.
+Standard and efficient implementations of Smolyak's algorithm for function approxmation in Python and Julia.
