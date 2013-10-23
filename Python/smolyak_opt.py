@@ -6,9 +6,9 @@ polynomials to interpolate and approximate the data.
 
 Method based on Judd, Maliar, Maliar, Valero 2013 (W.P)
 
-Author: Chase Coleman
+Author: Chase Coleman and Spencer Lyon
 """
-
+import sys
 import numpy as np
 import numpy.linalg as la
 from numpy.polynomial import chebyshev
@@ -16,8 +16,8 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from itertools import product, combinations_with_replacement, permutations
 import time as time
-import cProfile
 from dolo.numeric.interpolation import smolyak as smm
+# from permute import permute
 
 
 class Smoly_grid(object):
@@ -188,10 +188,16 @@ def permute(a):
     TCHS Computer Information Systems.  My thanks to him.
     """
 
-    # Initialize the iterator variable and other variables
+    a.sort() # Sort.
+
+    ## Output the first input sorted.
+    yield list(a)
+
     i = 0
     first = 0
     alen = len(a)
+
+    ## "alen" could also be used for the reference to the last element.
 
     while(True):
         i = alen - 1
@@ -209,30 +215,43 @@ def permute(a):
                 t.reverse()
                 a[(i + 1):alen] = t
 
+                # Output current.
                 yield list(a)
 
                 break # next.
 
-        if(i == first):
-            # End, we technically can't further permute this list.
-            return
+            if(i == first):
+                a.reverse()
+
+                yield list(a)
+                return
 
 
 def check_points(d, mu):
-    if abs(mu - 1) < 1e-14:
+    if mu == 1:
         return 2*d + 1
 
-    if abs(mu - 2) < 1e-14:
+    if mu == 2:
         return 1 + 4*d + 4*d*(d-1)/2.
 
-    if abs(mu - 3) < 1e-14: return 1 + 8*d + 12*d*(d-1)/2. + 8*d*(d-1)*(d-2)/6.
+    if mu == 3:
+        return 1 + 8*d + 12*d*(d-1)/2. + 8*d*(d-1)*(d-2)/6.
 
-d = 30
-mu = 3
-s = Smoly_grid(d, mu)
-print(s.build_sparse_grid().shape, check_points(d, mu))
-cProfile.run("s.build_sparse_grid()")
-cProfile.run("smm.smolyak_grids(d, mu)")
+
+my_args = sys.argv[1:]
+
+if __name__ == '__main__':
+
+    for d, mu in [(20, 2), (10, 3), (20, 3)]:
+        s = Smoly_grid(d, mu)
+        print(s.build_sparse_grid().shape, check_points(d, mu))
+
+if 'prof' in my_args or 'profile' in my_args:
+    import cProfile
+    cProfile.run("s.build_sparse_grid()")
+    cProfile.run("smm.smolyak_grids(d, mu)")
+
+
 
 
 
