@@ -29,7 +29,7 @@ function pmute(a)
             i -= 1
 
             # Need to do short-circuit evaluation here to avoid case where i=0
-            if i > 0 && a[i] < a[(i + 1)]
+            if a[i] < a[(i + 1)]
                 j = alen
                 while a[i] >= a[j]
                     j -= 1 # j--
@@ -46,8 +46,6 @@ function pmute(a)
             end
 
             if i == first
-                reverse!(a)
-                produce(a)
                 return
             end
         end
