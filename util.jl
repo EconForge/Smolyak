@@ -46,6 +46,8 @@ function pmute(a)
             end
 
             if i == first
+                reverse!(a)
+                produce(a)
                 return
             end
         end

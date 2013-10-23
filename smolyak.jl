@@ -203,7 +203,8 @@ function s_grid2(d::Int, mu::Int)
     An = A_chain(mu + 1)
 
     poss_inds = cell(1)
-    for el in Task(()->comb_with_replacement(p_vals, d))
+
+    for el in Task(()-> comb_with_replacement(p_vals, d))
         if d < sum(el) <= d + mu
             push!(poss_inds, el)
         end
@@ -212,26 +213,38 @@ function s_grid2(d::Int, mu::Int)
     poss_inds = poss_inds[2:]
 
     # TODO: Chase pick up here. I think the poss_inds is correct
-    #       (at least I tested it for (3, 2))
+    #       (at least I tested it for (3, 2)) ((Proof by single case. QED))
 
     # NOTE: I think we can replace Task(()->pmute(el)) with
     #       permutations(el), maybe not... didn't have time to test...
+    # Reply: I don't think we can.  It doesn't look like permutations(el)
+    # only returned the unique permutations.  Same problem I ran into with
+    # Python version.  Also, it should probably be pmute/permutations(val) not
+    # el.  unique() was a way around needing pmute
+
     true_inds = cell(1)
     for val in poss_inds
-        for el in Task(()->pmute(el))
+        for el in unique(permutations(val))# Task(()->pmute(el))
             push!(true_inds, el)
         end
     end
 
-
     # true_inds = [[el for el in pmute(collect(val))][2:] for val in poss_inds]
 
-    append!(true_inds, ones(Int64, d))
+    push!(true_inds, ones(Int64, d))
+
+    true_inds = true_inds[2:]
 
     # TODO: This can probably be optimized to not be of type Any
     points = Any[]
 
-    return poss_inds, true_inds
+    #------------------------------------------------------#
+    # PICK UP HERE WHOEVER COMES NEXT
+    #------------------------------------------------------#
+    # for ind in true_inds
+    #     temp = [An[i] for i in ind]
+    #     push!(points, cartprod(temp))
+    # end
 
     @forcartesian el p_vals begin
         if d <= sum(el) <= d + mu
