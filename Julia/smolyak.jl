@@ -139,14 +139,14 @@ function dense_grid(d::Int, mu::Int)
 end
 
 
-# This version only works for all mu
+# This version works for all mu
 function sparse_grid(d::Int, mu::Int)
     # Use disjoint Smolyak sets to construct Smolyak grid
 
     p_vals = ones(Int64, d)*(mu+1)
     An = A_chain(mu + d)
 
-    # TODO: This can probably be optimized to not be of type Any
+    # TODO: This can probably be optimized somehow.
     points = cell(1)
 
     @forcartesian el p_vals begin
@@ -155,9 +155,7 @@ function sparse_grid(d::Int, mu::Int)
         end
     end
 
-    grid = vcat(points[2:]...)
-
-    return grid
+    return vcat(points[2:]...)  # return the grid
 end
 
 

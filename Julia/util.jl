@@ -10,10 +10,9 @@ choose(n, k) = factorial(n) / (factorial(k) * factorial(n - k))
 slice_sqz(A, d, i) = squeeze(slicedim(A, d, i), d)
 
 
-function pmute(a)
-    # Return all unique permutations of the vector a
-
-    # a needs to be a vector when you pass it in
+function pmute(a::Union(Array{Float64, 1}, Array{Int64, 1}))
+    # Return all unique permutations of the vector a, which must be a 1d
+    # numerical array.
 
     sort!(a)
 
@@ -40,14 +39,14 @@ function pmute(a)
                 a[(i + 1):end] = t
 
                 # Output current.
-                produce(a)
+                produce(collect(tuple(a...)))
 
                 break # next.
             end
 
             if i == first
                 reverse!(a)
-                produce(a)
+                produce(collect(tuple(a...)))
                 return
             end
         end
