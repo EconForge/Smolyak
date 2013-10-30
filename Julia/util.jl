@@ -10,13 +10,19 @@ choose(n, k) = factorial(n) / (factorial(k) * factorial(n - k))
 slice_sqz(A, d, i) = squeeze(slicedim(A, d, i), d)
 
 
+# type Permute
+#     a::Union(Array{Float64, 1}, Array{Int64, 1})
+#     # i::Int64
+# end
+
+# start(x::Permute) = x.a
+# done(x::Permute, state) = x.a .== state || x.a .== next(x, state)  # TODO: we need to decide on which one to use!
+
 function pmute(a::Union(Array{Float64, 1}, Array{Int64, 1}))
     # Return all unique permutations of the vector a, which must be a 1d
     # numerical array.
 
-    sort!(a)
-
-    # produce(a)  # we do this below, just before returning
+    sort!(a)  # Sort so we can deal with repeated elements
 
     # just initializing here so these are available in all `while` scopes
     i = 0
@@ -30,23 +36,25 @@ function pmute(a::Union(Array{Float64, 1}, Array{Int64, 1}))
 
             if a[i] < a[i + 1]
                 j = alen
+
                 while a[i] >= a[j]
-                    j -= 1 # j--
+                    j -= 1  # j--
                 end
-                a[i], a[j] = a[j], a[i] # swap(a[j], a[i])
+
+                a[i], a[j] = a[j], a[i]  # swap(a[j], a[i])
                 t = a[(i + 1):end]
                 reverse!(t)
                 a[(i + 1):end] = t
 
                 # Output current.
-                produce(collect(tuple(a...)))
+                produce(copy(a))
 
-                break # next.
+                break  # next.
             end
 
             if i == first
                 reverse!(a)
-                produce(collect(tuple(a...)))
+                produce(copy(a))
                 return
             end
         end
