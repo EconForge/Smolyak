@@ -140,7 +140,7 @@ end
 
 
 # This version works for all mu
-function sparse_grid(d::Int, mu::Int)
+function sparse_grid_naive(d::Int, mu::Int)
     # Use disjoint Smolyak sets to construct Smolyak grid
 
     p_vals = ones(Int64, d)*(mu+1)
@@ -193,12 +193,9 @@ function s_grid1(d::Int, mu::Int)
     return grid
 end
 
-# TODO: Still not working
-function s_grid2(d::Int, mu::Int)
-    # Use disjoint Smolyak sets to construct Smolyak grid
 
+function smol_inds(d::Int, mu::Int)
     p_vals = [1:mu + 1]
-    An = A_chain(mu + 1)
 
     poss_inds = cell(1)
 
@@ -219,13 +216,50 @@ function s_grid2(d::Int, mu::Int)
         end
     end
 
+    return true_inds
+
+end
+
+
+function _s_grid_general(d::Int, mu::Int)
+    # Use disjoint Smolyak sets to construct Smolyak grid
+
+    true_inds = smol_inds(d, mu)
+    An = A_chain(mu + 1)
     return vcat([ cartprod([An[i] for i in el]) for el in true_inds]...)
 end
 
-# Profile results for   different functions
-#            Function            Elapsed Relative Replications
-# [1,]      "sparse_grid(15, 2)" 3.50408  1.01684           10
-# [2,]      "s_grid1(15, 2)"     3.44604      1.0           10
+
+function _s_grid(d::Int, mu::Int)
+    true_inds = smol_inds(d, mu)
+    An = A_chain(mu + 1)
+
+    grid = Array(Float64, num_grid_pts(d, mu), d)
+    n = 1
+
+    for el in true_inds
+        chunk = cartprod([An[i] for i in el])  # new_len by d block of matrix grid
+        new_len = size(chunk, 1)
+        grid[n:new_len + n - 1, :] = chunk
+        n += new_len
+    end
+
+    # TODO: iterate over the product of my stuff and fill grid in
+
+    # will need [n:new_len + n]; n += new_len [+ 1]
+
+    return grid
+
+end
+
+
+function sparse_grid(d::Int64, mu::Int64)
+    if mu <= 3
+        return _s_grid(d, mu)  # TODO: Write these functions!
+    else
+        return _s_grid_general(d, mu)  # TODO: Write these functions!
+    end
+end
 
 
 # function plot_grid(g)
