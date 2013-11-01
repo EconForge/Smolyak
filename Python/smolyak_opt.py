@@ -15,9 +15,9 @@ from numpy.polynomial import chebyshev
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from itertools import product, combinations_with_replacement, permutations
+from itertools import chain
 import time as time
 from dolo.numeric.interpolation import smolyak as smm
-# from permute import permute
 
 
 class Smoly_grid(object):
@@ -88,9 +88,6 @@ class Smoly_grid(object):
             # A_chain.append(list(Sn[range(1, num, 2)]))
             Sn = Sn[range(0, num, 2)]
 
-        # A_chain.append([-1, 1])
-        # A_chain.append([0])
-        # A_chain.reverse()
 
         return A_chain
 
@@ -133,13 +130,16 @@ class Smoly_grid(object):
         poss_inds = [el for el in combinations_with_replacement(possible_values, d) \
                       if d<sum(el)<=d+mu]
 
-        true_inds = [[el for el in permute(list(val))][1:] for val in poss_inds]
+        true_inds = []
+
+        true_inds = [[el for el in permute(list(val))] for val in poss_inds]
+
 
         # Add the d dimension 1 array so that we don't repeat it a bunch
         # of times
-        true_inds.extend([[1]*d])
+        true_inds.extend([[[1]*d]])
 
-        tinds = np.vstack(true_inds)
+        tinds = list(chain.from_iterable(true_inds))
 
         points = []
 
@@ -150,7 +150,7 @@ class Smoly_grid(object):
             # inds.append(el)
             points.extend(list(product(*temp)))
 
-        grid = np.array(points)
+        grid = points
         self.grid = grid
 
         return grid
@@ -223,7 +223,7 @@ def permute(a):
             if(i == first):
                 a.reverse()
 
-                yield list(a)
+                # yield list(a)
                 return
 
 
@@ -240,16 +240,16 @@ def check_points(d, mu):
 
 my_args = sys.argv[1:]
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
 
-    for d, mu in [(20, 2), (10, 3), (20, 3)]:
-        s = Smoly_grid(d, mu)
-        print(s.build_sparse_grid().shape, check_points(d, mu))
+#     for d, mu in [(20, 2), (10, 3), (20, 3)]:
+#         s = Smoly_grid(d, mu)
+#         print(s.build_sparse_grid().shape, check_points(d, mu))
 
-if 'prof' in my_args or 'profile' in my_args:
-    import cProfile
-    cProfile.run("s.build_sparse_grid()")
-    cProfile.run("smm.smolyak_grids(d, mu)")
+# if 'prof' in my_args or 'profile' in my_args:
+#     import cProfile
+#     cProfile.run("s.build_sparse_grid()")
+#     cProfile.run("smm.smolyak_grids(d, mu)")
 
 
 
