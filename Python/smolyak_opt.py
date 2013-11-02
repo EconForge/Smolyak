@@ -18,6 +18,8 @@ from itertools import product, combinations_with_replacement, permutations
 from itertools import chain
 import time as time
 from dolo.numeric.interpolation import smolyak as smm
+import pandas as pd
+from sklearn.utils.extmath import cartesian
 
 
 class Smoly_grid(object):
@@ -148,12 +150,36 @@ class Smoly_grid(object):
             # Save these indices that we iterate through because
             # we need them for the chebyshev polynomial combination
             # inds.append(el)
+            # Try scikitlearn cartesian product
             points.extend(list(product(*temp)))
 
-        grid = points
+        grid = pd.lib.to_object_array_tuples(points).astype(float)
         self.grid = grid
 
-        return grid
+        return grid, tinds
+
+    def plot_grid(self):
+        import matplotlib.pyplot as plt
+        grid = self.grid
+        if grid.shape[1] == 2:
+            xs = grid[:, 0]
+            ys = grid[:, 1]
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.scatter(xs, ys)
+            ax.grid(True, linestyle='--',color='0.75')
+            plt.show()
+        elif grid.shape[1] == 3:
+            xs = grid[:, 0]
+            ys = grid[:, 1]
+            zs = grid[:, 2]
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            ax.scatter(xs, ys, zs)
+            ax.grid(True, linestyle='--',color='0.75')
+            plt.show()
+        else:
+            raise ValueError('Can only plot 2 or 3 dimensional problems')
 
 
     def create_phi_grid(self):
@@ -240,16 +266,16 @@ def check_points(d, mu):
 
 my_args = sys.argv[1:]
 
-# if __name__ == '__main__':
+if __name__ == '__main__':
 
-#     for d, mu in [(20, 2), (10, 3), (20, 3)]:
-#         s = Smoly_grid(d, mu)
-#         print(s.build_sparse_grid().shape, check_points(d, mu))
+    for d, mu in [(20, 2), (10, 3), (20, 3)]:
+        s = Smoly_grid(d, mu)
+        print(s.build_sparse_grid().shape, check_points(d, mu))
 
-# if 'prof' in my_args or 'profile' in my_args:
-#     import cProfile
-#     cProfile.run("s.build_sparse_grid()")
-#     cProfile.run("smm.smolyak_grids(d, mu)")
+if 'prof' in my_args or 'profile' in my_args:
+    import cProfile
+    cProfile.run("s.build_sparse_grid()")
+    cProfile.run("smm.smolyak_grids(d, mu)")
 
 
 
