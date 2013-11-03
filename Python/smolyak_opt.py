@@ -76,6 +76,10 @@ class Smoly_grid(object):
 
         # # Start w finding the biggest Sn(We will subsequently reduce it)
         Sn = self._find_S_n(n)
+
+        # Save to be used later in evaluations
+        self.Sn = Sn
+
         A_chain = {}
         A_chain[1] = [0.]
         A_chain[2] = [-1., 1.]
@@ -178,25 +182,18 @@ class Smoly_grid(object):
     def calc_chebvals(self):
         """
         We will eventually need the chebyshev polynomials evaluated at
-        every point that we calculate in the grid.  We will find them
+        every poiOnt that we calculate in the grid.  We will find them
         and store them in a dictionary of dictionaries.  The outer dict
         will say which chebyshev polynomial it is and the inner dict
         will have each point evaluated in it.
         """
-        d = self.d
-        mu = self.mu
-        a_chain = self.a_chain
-
-        max_poly = 2**(len(a_chain) - 1) + 1
+        pts = self._find_S_n(self.mu + 1)  # TODO: save this when we call _find_A_n
+        max_poly = pts.size  # Chase: Check this. I think this is fine
 
         cheb_dict = {}
-        for elms in xrange(1, max_poly):
-            cheb_points_dict = {}
-            for el in a_chain[elms]:
-                cheb_points_dict[el] = cheby_eval(el, elms)
-            cheb_dict[elms] = cheb_points_dict
-
-        return cheb_dict
+        for phi_n in xrange(1, max_poly + 1):
+            cheb_dict[phi_n] = {pt: t_pt for (pt, t_pt) in
+                                zip(pts, cheby_eval(pts, phi_n))}
 
     def _find_aphi(self, n):
         """
@@ -276,21 +273,21 @@ class Smoly_grid(object):
 
 
 def cheby_eval(x, n):
-    past_val = 1.
-    curr_val = x
+   past_val = np.ones_like(x)
+   curr_val = x
 
-    if n==1:
-        return past_val
+   if n==1:
+       return past_val
 
-    if n==2:
-        return curr_val
+   if n==2:
+       return curr_val
 
-    for i in xrange(3, n+1):
-        temp = 2*x*curr_val - past_val
-        past_val = curr_val
-        curr_val = temp
+   for i in xrange(3, n+1):
+       temp = 2*x*curr_val - past_val
+       past_val = curr_val
+       curr_val = temp
 
-    return curr_val
+   return curr_val
 
 
 def permute(a):
