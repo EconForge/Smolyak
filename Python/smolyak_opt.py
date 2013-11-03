@@ -11,13 +11,13 @@ Author: Chase Coleman and Spencer Lyon
 import sys
 import numpy as np
 import numpy.linalg as la
-from numpy.polynomial import chebyshev
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from itertools import product, combinations_with_replacement, permutations
+from itertools import chain
 import time as time
 from dolo.numeric.interpolation import smolyak as smm
-# from permute import permute
+import pandas as pd
 
 
 class Smoly_grid(object):
@@ -88,9 +88,8 @@ class Smoly_grid(object):
             # A_chain.append(list(Sn[range(1, num, 2)]))
             Sn = Sn[range(0, num, 2)]
 
-        # A_chain.append([-1, 1])
-        # A_chain.append([0])
-        # A_chain.reverse()
+        self.a_chain = A_chain
+
 
         return A_chain
 
@@ -115,6 +114,39 @@ class Smoly_grid(object):
 
         return vals
 
+    def _find_smol_inds(self):
+        """
+        This method finds all of the indices that satisfy the requirement
+        that d \leq \sum_{i=1}^d \leq d + \mu.  Once we have these, then
+        they can be used to build both the grid and the polynomial
+        basis.
+        """
+        d = self.d
+        mu = self.mu
+
+        # Need to capture up to value mu + 1 so in python need mu+2
+        possible_values = range(1, mu + 2)
+
+        # find all (i1, i2, ... id) such that their sum is in range
+        # we want; this will cut down on later iterations
+        poss_inds = [el for el in combinations_with_replacement(possible_values, d) \
+                      if d<sum(el)<=d+mu]
+
+        true_inds = []
+
+        true_inds = [[el for el in permute(list(val))] for val in poss_inds]
+
+
+        # Add the d dimension 1 array so that we don't repeat it a bunch
+        # of times
+        true_inds.extend([[[1]*d]])
+
+        tinds = list(chain.from_iterable(true_inds))
+
+        self.smol_inds = tinds
+
+        return tinds
+
     def build_sparse_grid(self):
         """
         This method builds a grid for the object
@@ -125,23 +157,11 @@ class Smoly_grid(object):
         # Get An chain
         An = self._find_A_n(mu + 1)
 
-        # Need to capture up to value mu + 1 so in python need mu+2
-        possible_values = range(1, mu + 2)
-
-        # find all (i1, i2, ... id) such that their sum is in range
-        # we want; this will cut down on later iterations
-        poss_inds = [el for el in combinations_with_replacement(possible_values, d) \
-                      if d<sum(el)<=d+mu]
-
-        true_inds = [[el for el in permute(list(val))][1:] for val in poss_inds]
-
-        # Add the d dimension 1 array so that we don't repeat it a bunch
-        # of times
-        true_inds.extend([[1]*d])
-
-        tinds = np.vstack(true_inds)
-
         points = []
+
+        # Need to get the correct indices
+
+        tinds = self._find_smol_inds()
 
         for el in tinds:
             temp = [An[i] for i in el]
@@ -150,36 +170,128 @@ class Smoly_grid(object):
             # inds.append(el)
             points.extend(list(product(*temp)))
 
-        grid = np.array(points)
+        grid = pd.lib.to_object_array_tuples(points).astype(float)
         self.grid = grid
 
         return grid
 
-
-    def create_phi_grid(self):
+    def calc_chebvals(self):
         """
-        Makes a matrix as presented in section 3 of JMMV paper.
+        We will eventually need the chebyshev polynomials evaluated at
+        every point that we calculate in the grid.  We will find them
+        and store them in a dictionary of dictionaries.  The outer dict
+        will say which chebyshev polynomial it is and the inner dict
+        will have each point evaluated in it.
         """
         d = self.d
         mu = self.mu
-        indix = self.inds
-        achain = self.Achain
+        a_chain = self.a_chain
 
-        phi_chain = []
-        phi_chain.append(1)
+        max_poly = 2**(len(a_chain) - 1) + 1
 
+        cheb_dict = {}
+        for elms in xrange(1, max_poly):
+            cheb_points_dict = {}
+            for el in a_chain[elms]:
+                cheb_points_dict[el] = cheby_eval(el, elms)
+            cheb_dict[elms] = cheb_points_dict
 
-        for el in indix:
-            print(chebyshev.chebval(achain[0], [1]))
+        return cheb_dict
 
-
-
-
-
-    def cheb_poly_seq(self):
+    def _find_aphi(self, n):
         """
-        Makes a sequence of chebyshev polynomials evaluated at x
+        Finds the disjoint sets of aphi's that will be used to compute
+        which functions we need to calculate
         """
+        # Need to find which is biggest function that is going to be
+        # called is
+        max_ind = 2**(n-1) + 1
+
+
+        # First create a dictionary
+        aphi_chain = {}
+
+        aphi_chain[1] = [1]
+        aphi_chain[2] = [2, 3]
+
+        curr_val = 4
+        for i in xrange(3, n+1):
+            end_val = 2**(i-1) + 1
+            temp = range(curr_val, end_val+1)
+            aphi_chain[i] = temp
+            curr_val = end_val+1
+
+        return aphi_chain
+
+    def build_basis_polynomials(self):
+        """
+        This function builds the base polynomials that will be used to
+        interpolate.
+        """
+        d = self.d
+        mu = self.mu
+
+        smol_inds = self.smol_inds
+        aphi = self._find_aphi(mu + 1)
+
+        # Bring in polynomials
+        cheb_dict = self.calc_chebvals()
+
+        base_polys = []
+
+        for el in smol_inds:
+            temp = [aphi[i] for i in el]
+            # Save these indices that we iterate through because
+            # we need them for the chebyshev polynomial combination
+            # inds.append(el)
+            base_polys.extend(list(product(*temp)))
+
+        self.base_polys = base_polys
+
+        return base_polys
+
+
+    def plot_grid(self):
+        import matplotlib.pyplot as plt
+        grid = self.grid
+        if grid.shape[1] == 2:
+            xs = grid[:, 0]
+            ys = grid[:, 1]
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.scatter(xs, ys)
+            ax.grid(True, linestyle='--',color='0.75')
+            plt.show()
+        elif grid.shape[1] == 3:
+            xs = grid[:, 0]
+            ys = grid[:, 1]
+            zs = grid[:, 2]
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            ax.scatter(xs, ys, zs)
+            ax.grid(True, linestyle='--',color='0.75')
+            plt.show()
+        else:
+            raise ValueError('Can only plot 2 or 3 dimensional problems')
+
+
+def cheby_eval(x, n):
+    past_val = 1.
+    curr_val = x
+
+    if n==1:
+        return past_val
+
+    if n==2:
+        return curr_val
+
+    for i in xrange(3, n+1):
+        temp = 2*x*curr_val - past_val
+        past_val = curr_val
+        curr_val = temp
+
+    return curr_val
+
 
 def permute(a):
     """
@@ -223,7 +335,7 @@ def permute(a):
             if(i == first):
                 a.reverse()
 
-                yield list(a)
+                # yield list(a)
                 return
 
 
