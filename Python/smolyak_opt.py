@@ -8,6 +8,7 @@ Method based on Judd, Maliar, Maliar, Valero 2013 (W.P)
 
 Author: Chase Coleman and Spencer Lyon
 """
+from operator import mul
 import sys
 import numpy as np
 import numpy.linalg as la
@@ -195,6 +196,8 @@ class Smoly_grid(object):
             cheb_dict[phi_n] = {pt: t_pt for (pt, t_pt) in
                                 zip(pts, cheby_eval(pts, phi_n))}
 
+        return cheb_dict
+
     def _find_aphi(self, n):
         """
         Finds the disjoint sets of aphi's that will be used to compute
@@ -246,6 +249,24 @@ class Smoly_grid(object):
         self.base_polys = base_polys
 
         return base_polys
+
+    def _build_B(self):
+        basis = self.base_polys
+        grid = self.grid
+
+        n = len(grid)
+        B = np.empty((n, n))
+
+        cd = self.calc_chebvals()
+
+        for row in xrange(n):
+            for col in xrange(n):
+                pt = grid[row]
+                f = basis[col]
+                B[row, col] = reduce(mul, [cd[i][pt[k]] for k, i in enumerate(f)])
+
+        return B
+
 
 
     def plot_grid(self):
