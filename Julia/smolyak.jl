@@ -2,6 +2,11 @@ using Iterators
 using Cartesian
 # import PyPlot
 reload("util")
+import Base.show
+
+## ------------- ##
+#- Generic Tools -#
+## ------------- ##
 
 counting_coef(d, mu, i) = (-1) ^ (d + mu - i) * choose(d - 1, d + mu - i)
 
@@ -9,19 +14,22 @@ counting_coef(d, mu, i) = (-1) ^ (d + mu - i) * choose(d - 1, d + mu - i)
 function num_grid_pts(d::Int, mu::Int)
 
     if mu == 1
-        return int(2 * s - 1)
+        return int(2d - 1)
     elseif mu == 2
-        return int(1 + 4*d + 4*d*(d-1)/2)
+        return int(1 + 4d + 4d*(d-1)/2)
+    elseif mu == 3
+        return int(1 + 8d + 12d*(d-1)/2 + 8d*(d-1)*(d-2)/6)
     else
-        return int(1 + 8*d + 12*d*(d-1)/2 + 8*d*(d-1)*(d-2)/6)
+        error("We only know the number of grid points for mu \\in [1, 2, 3]")
     end
 end
 
 
 function m_i(i::Int)
-    if i < 1
+    if i < 0
         error("DomainError: i must be positive")
-
+    elseif i == 0
+        return 0
     elseif i == 1
         return 1
     else
@@ -34,6 +42,7 @@ function cheby2n(x, n::Int; kind=1)
     # Evaluates the first n+1 Chebyshev polynomials of the 'kind' kind at x
     # NOTE: This will only work when kind = 1 or kind = 2
     # NOTE: We evaluate the first n+1, with the first dimension being all 1's
+
     dim = size(x)
     results = zeros(n + 1, dim...)
     results[1, :] = 1.
@@ -105,99 +114,51 @@ function A_chain(n::Int)
 end
 
 
-function dense_grid(d::Int, mu::Int)
-    # Use nested Smolyak sets to construct Smolyak grid
+function cheb_dict(mu::Int)
+    pts = S_n(mu + 1)
+    max_poly = length(pts)
 
-    p_vals = [1:mu+1]
+    # TODO: Work on figuring out the types here
+    # cd = Dict{Int, Dict{Float64, Float64}}()
+    cd = Dict()
 
-    # TODO: This can probably be optimized to not be of type Any
-    points = Any[]
-
-    # Smolyak.find_points(self)
-    for el in product([p_vals for i in [1:d]]...)
-        if sum(el) == d + mu
-            temp_points = map(S_n, el)
-            append!(points, [collect(product(temp_points...))...])
-        end
+    for phi_n=1:max_poly
+        cd[phi_n] = {pt => t_pt for (pt, t_pt) in
+                     zip(pts, cheby_eval(pts, phi_n))}
     end
 
-    # Build Smolyak grid
-    p_set = Set()
-
-    for elem in points
-        push!(p_set, [elem...])
-    end
-
-    unique_pts = collect(p_set)
-    n_pts = size(unique_pts, 1)
-    grid = Array(Float64, n_pts, d)
-    for i=1:n_pts
-        grid[i, :] = unique_pts[i]
-    end
-
-    return grid
+    return cd
 end
 
 
-# This version works for all mu
-function sparse_grid_naive(d::Int, mu::Int)
-    # Use disjoint Smolyak sets to construct Smolyak grid
+function cheby_eval(x::Array{Float64}, n::Int)
+    pv = ones(size(x)...)
+    cv = x
 
-    p_vals = ones(Int64, d)*(mu+1)
-    An = A_chain(mu + d)
-
-    # TODO: This can probably be optimized somehow.
-    points = cell(1)
-
-    @forcartesian el p_vals begin
-        if d <= sum(el) <= d + mu
-            push!(points, cartprod([An[i] for i in el]))
+    if n == 1
+        return pv
+    elseif n == 2
+        return cv
+    else
+        for i=3:n
+            tmp = 2 .* x .* cv - pv
+            pv = cv
+            cv = tmp
         end
+        return cv
     end
-
-    return vcat(points[2:]...)  # return the grid
 end
 
 
-# This version only works for mu <= 3
-function s_grid1(d::Int, mu::Int)
-    # Use disjoint Smolyak sets to construct Smolyak grid
-
-    p_vals = ones(Int64, d)*(mu+1)
-    An = A_chain(mu + d)
-
-    # TODO: This can probably be optimized to not be of type Any
-    # points = Any[]
-
-    grid = Array(Float64, num_grid_pts(d, mu), d)
-    n = 1
-
-    @forcartesian el p_vals begin
-        if d <= sum(el) <= d + mu
-            for pt in product([An[i] for i in el]...)
-                grid[n, :] = [pt...]
-                n += 1
-            end
-            # NOTE: The line below is the equiv of the for loop above, but will
-            #       always work, even when mu > 3
-            # append!(points, [collect(product(temp_points...))...])
-        end
-    end
-
-    # n_pts = size(points, 1)::Int
-    # grid = Array(Float64, n_pts, d)
-    # for i=1:n_pts
-    #     grid[i, :] = [points[i]...]
-    # end
-
-    return grid
-end
+## --------------- ##
+#- Isotropic Grids -#
+## --------------- ##
 
 
 function smol_inds(d::Int, mu::Int)
     p_vals = [1:mu + 1]
 
-    poss_inds = cell(1)
+    poss_inds = cell(1)  # see below
 
     for el in Task(()-> comb_with_replacement(p_vals, d))
         if d < sum(el) <= d + mu
@@ -208,7 +169,6 @@ function smol_inds(d::Int, mu::Int)
     # cell(1) gives undefined reference in first slot. We remove it here
     poss_inds = poss_inds[2:]
 
-    # TOOD: The bug is here!!! (with using pmute)
     true_inds = Any[ones(Int64, d)]
     for val in poss_inds
         for el in Task(()->pmute(val))
@@ -217,11 +177,26 @@ function smol_inds(d::Int, mu::Int)
     end
 
     return true_inds
-
 end
 
 
-function _s_grid_general(d::Int, mu::Int)
+function base_inds(n::Int)
+    max_ind = m_i(n)
+    phi = Dict{Int, Array{Int64, 1}}()
+    phi[1] = [1]
+    phi[2] = [2, 3]
+    low_ind = 4  # current lower index
+    for i = 3:n
+        high_ind = m_i(i)
+        phi[i] = [low_ind:high_ind]
+        low_ind = high_ind + 1
+    end
+
+    return phi
+end
+
+
+function sparse_grid(d::Int, mu::Int)
     # Use disjoint Smolyak sets to construct Smolyak grid
 
     true_inds = smol_inds(d, mu)
