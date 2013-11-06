@@ -74,10 +74,9 @@ function my_repeat(a, n)
 end
 
 
-function cartprod(arrs,
-                  out=Array(eltype(arrs[1]),
-                            prod([length(a) for a in arrs]),
-                            length(arrs)))
+function cartprod(arrs, out=Array(eltype(arrs[1]),
+                                  prod([length(a) for a in arrs]),
+                                  length(arrs)))
     sz = Int[length(a) for a in arrs]
     narrs = length(arrs)
     Cartesian.@forcartesian I sz begin
@@ -113,6 +112,7 @@ function cartesian(arrs; out=None)
 
     return out
 end
+
 
 function comb_with_replacement(itr, r::Int)
     # Combinations with replacement. From algorithm in python docs.
