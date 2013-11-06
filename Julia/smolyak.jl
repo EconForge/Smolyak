@@ -230,46 +230,153 @@ function _s_grid_general(d::Int, mu::Int)
 end
 
 
-function _s_grid(d::Int, mu::Int)
+function grid_base(d::Int, mu::Int)
+    # Build B matrix for interpolating polynomial
+
     true_inds = smol_inds(d, mu)
-    An = A_chain(mu + 1)
+    An = base_inds(mu + 1)
+    bs = cell(1)
+    # for el in true_inds
+    #     for ell in cartprod([An[i] for i in el])
+    #         push!(bs, ell)
+    #     end
+    # end
+    # return bs[2:]
+    # return {cartprod([An[i] for i in el]) for el in true_inds}
+    return vcat([ cartprod([An[i] for i in el]) for el in true_inds]...)
+end
 
-    grid = Array(Float64, num_grid_pts(d, mu), d)
-    n = 1
+### type SGrid
 
-    for el in true_inds
-        chunk = cartprod([An[i] for i in el])  # new_len by d block of matrix grid
-        new_len = size(chunk, 1)
-        grid[n:new_len + n - 1, :] = chunk
-        n += new_len
+type SGrid
+    d::Int
+    mu::Int
+    grid::Array{Float64, 2}
+    inds::Array{Any, 1}
+
+    function SGrid(d::Int, mu::Int, grid::Array{Float64, 2}, inds::Array{Any, 1})
+        if d < 2
+            error("You passed d = $d. d must be greater than 1")
+        end
+        if mu < 1
+            error("You passed mu = $mu. mu must be greater than 1")
+        end
+        new(d, mu, grid, inds)
     end
-
-    # TODO: iterate over the product of my stuff and fill grid in
-
-    # will need [n:new_len + n]; n += new_len [+ 1]
-
-    return grid
-
 end
 
 
-function sparse_grid(d::Int64, mu::Int64)
-    if mu <= 3
-        return _s_grid(d, mu)  # TODO: Write these functions!
-    else
-        return _s_grid_general(d, mu)  # TODO: Write these functions!
-    end
+# Add convenience constructor to just pass d, mu
+SGrid(d::Int, mu::Int) = SGrid(d, mu, sparse_grid(d, mu), smol_inds(d, mu))
+
+
+function show(io::IO, sg::SGrid)
+    npoints = size(sg.grid, 1)
+    msg = "Smolyak Grid:\n\td: $(sg.d)\n\tmu: $(sg.mu)\n\tnpoints: $npoints"
+    print(io, msg)
 end
 
 
-# function plot_grid(g)
+function Bmat(sg::SGrid)
+    # Compute the matrix B from equation 22 in JMMV 2013
+    # Naive translation of dolo.numeric.interpolation.smolyak.SmolyakBasic
+
+    Ts = cheby2n(sg.grid', size(sg.grid, 1)  -1)
+    B = cell(1)
+    d = sg.d
+    b_inds = grid_base(sg.d, sg.mu)'
+    for i=1:size(sg.grid, 1)
+        el = slice(b_inds,:, i)
+        push!(B, reduce(.*, {slice(Ts, el[k], k, :) for k=1:d}))
+    end
+    B = hcat(B[2:]...)
+    return B
+end
+
+
+function Bmat2(sg::SGrid)
+    # Compute the matrix B from equation 22 in JMMV 2013
+    # Naive translation of Chase's function
+
+    basis = grid_base(sg.d, sg.mu)
+    grid = sg.grid
+
+    n = size(grid, 1)
+    B = Array(Float64, n, n)
+
+    chd = cheb_dict(sg.mu)
+
+    for row = 1:n
+        for col = 1:n
+            pt = grid[row, :]
+            f = basis[col, :]
+            B[row, col] = reduce(*, [chd[i][pt[k]] for (k, i) in enumerate(f)])
+        end
+    end
+    return B
+end
+
+
+## ----------------- ##
+#- Anisotropic Grids -#
+## ----------------- ##
+
+
+function smol_inds(d::Int, mu::Array{Int, 1})
+    # Compute indices needed for anisotropic smolyak grid given number of
+    # dimensions d and a vector of mu parameters mu
+
+    if length(mu) != d
+        error("ValueError: mu must have d elements.")
+    end
+
+    mu_max = maximum(mu)
+    mup1 = mu + 1
+
+    p_vals = [1:mu_max + 1]
+
+    poss_inds = cell(1)  # see below
+
+    for el in Task(()-> comb_with_replacement(p_vals, d))
+        if d < sum(el) <= d + mu_max
+            push!(poss_inds, el)
+        end
+    end
+
+    # cell(1) gives undefined reference in first slot. We remove it here
+    poss_inds = poss_inds[2:]
+
+    true_inds = Any[ones(Int64, d)]
+    for val in poss_inds
+        for el in Task(()->pmute(val))
+            if all(el .<= mup1)
+                push!(true_inds, el)
+            end
+        end
+    end
+
+    return true_inds
+end
+
+
+
+# function plot(sg::SGrid)
+#     g = sg.grid
 #     if size(g, 2) == 2
 #         PyPlot.plot(g[:, 1], g[:, 2], "b.")
 #         PyPlot.xlim((-1.5, 1.5))
 #         PyPlot.ylim((-1.5, 1.5))
+#         PyPlot.title("Smolyak grid: \$d=$(sg.d), \\; \\mu=$(sg.mu)\$")
 #     elseif size(g, 2) == 3
 #         PyPlot.scatter3D(g[:, 1], g[:, 2], g[:, 3], "b.")
+#         PyPlot.title("Smolyak grid: \$d=$(sg.d), \\; \\mu=$(sg.mu)\$")
 #     else
-#         throw("ERROR: can only plot 2d or 3d grids")
+#         error("ERROR: can only plot 2d or 3d grids")
 #     end
 # end
+
+#----------
+# Test case from dolo
+#----------
+
+# fun(x, y) = exp(- x .^ 2 - y .^ 2)
