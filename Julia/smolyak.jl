@@ -210,14 +210,6 @@ function grid_base(d::Int, mu::Int)
 
     true_inds = smol_inds(d, mu)
     An = base_inds(mu + 1)
-    bs = cell(1)
-    # for el in true_inds
-    #     for ell in cartprod([An[i] for i in el])
-    #         push!(bs, ell)
-    #     end
-    # end
-    # return bs[2:]
-    # return {cartprod([An[i] for i in el]) for el in true_inds}
     return vcat([ cartprod([An[i] for i in el]) for el in true_inds]...)
 end
 
@@ -252,41 +244,21 @@ function show(io::IO, sg::SGrid)
 end
 
 
+### Build B-matrix for grid object
+
+
 function Bmat(sg::SGrid)
     # Compute the matrix B from equation 22 in JMMV 2013
     # Naive translation of dolo.numeric.interpolation.smolyak.SmolyakBasic
 
-    Ts = cheby2n(sg.grid', size(sg.grid, 1)  -1)
-    B = cell(1)
+    Ts = cheby2n(sg.grid', m_i(sg.mu + 1))
+    n = size(sg.grid, 1)
     d = sg.d
-    b_inds = grid_base(sg.d, sg.mu)'
-    for i=1:size(sg.grid, 1)
-        el = slice(b_inds,:, i)
-        push!(B, reduce(.*, {slice(Ts, el[k], k, :) for k=1:d}))
-    end
-    B = hcat(B[2:]...)
-    return B
-end
-
-
-function Bmat2(sg::SGrid)
-    # Compute the matrix B from equation 22 in JMMV 2013
-    # Naive translation of Chase's function
-
-    basis = grid_base(sg.d, sg.mu)
-    grid = sg.grid
-
-    n = size(grid, 1)
+    b_inds = grid_base(sg.d, sg.mu)
     B = Array(Float64, n, n)
-
-    chd = cheb_dict(sg.mu)
-
-    for row = 1:n
-        for col = 1:n
-            pt = grid[row, :]
-            f = basis[col, :]
-            B[row, col] = reduce(*, [chd[i][pt[k]] for (k, i) in enumerate(f)])
-        end
+    for ind = 1:n
+        el = slice(b_inds, ind, :)
+        B[:, ind] = reduce(.*, {slice(Ts, el[k], k, :) for k=1:d})
     end
     return B
 end
