@@ -64,6 +64,10 @@ class Smoly_grid(object):
             raise ValueError('You are trying to build a one dimensional\
                              grid.')
 
+        self.build_sparse_grid()
+        self.build_basis_polynomials()
+        # self._build_B()
+
     def _find_A_n(self, n):
         """
         This method finds all of the unidimensional disjoint sets
@@ -235,7 +239,7 @@ class Smoly_grid(object):
         aphi = self._find_aphi(mu + 1)
 
         # Bring in polynomials
-        cheb_dict = self.calc_chebvals()
+        # cheb_dict = self.calc_chebvals()
 
         base_polys = []
 
@@ -251,23 +255,14 @@ class Smoly_grid(object):
         return base_polys
 
     def _build_B(self):
-        basis = self.base_polys
-        grid = self.grid
-
-        n = len(grid)
-        B = np.empty((n, n))
-
-        cd = self.calc_chebvals()
-
-        for row in xrange(n):
-            for col in xrange(n):
-                pt = grid[row]
-                f = basis[col]
-                B[row, col] = reduce(mul, [cd[i][pt[k]] for k, i in enumerate(f)])
-
+        Ts = chebychev(self.grid.T, m_i(self.mu + 1))
+        n = len(self.grid)
+        B = np.empty((n, n), order='C')
+        for ind, comb in enumerate(self.base_polys):
+            B[ind, :] = reduce(mul, [Ts[comb[i] - 1, i, :]
+                               for i in range(self.d)])
+        self.B = B
         return B
-
-
 
     def plot_grid(self):
         import matplotlib.pyplot as plt
@@ -294,21 +289,32 @@ class Smoly_grid(object):
 
 
 def cheby_eval(x, n):
-   past_val = np.ones_like(x)
-   curr_val = x
+    past_val = np.ones_like(x)
+    curr_val = x
 
-   if n==1:
-       return past_val
+    if n == 1:
+        return past_val
 
-   if n==2:
-       return curr_val
+    if n == 2:
+        return curr_val
 
-   for i in xrange(3, n+1):
-       temp = 2*x*curr_val - past_val
-       past_val = curr_val
-       curr_val = temp
+    for i in xrange(3, n + 1):
+        temp = 2*x*curr_val - past_val
+        past_val = curr_val
+        curr_val = temp
 
-   return curr_val
+    return curr_val
+
+
+def chebychev(x, n):
+    # computes the chebychev polynomials of the first kind
+    dim = x.shape
+    results = np.zeros((n+1, ) + dim)
+    results[0, ...] = np.ones(dim)
+    results[1, ...] = x
+    for i in range(2,n+1):
+        results[i,...] = 2 * x * results[i-1,...] - results[i-2,...]
+    return results
 
 
 def permute(a):
@@ -366,6 +372,17 @@ def check_points(d, mu):
 
     if mu == 3:
         return 1 + 8*d + 12*d*(d-1)/2. + 8*d*(d-1)*(d-2)/6.
+
+
+def m_i(i):
+    if i < 0:
+        raise ValueError('i must be positive')
+    elif i == 0:
+        return 0
+    elif i == 1:
+        return 1
+    else:
+        return 2**(i - 1) + 1
 
 
 my_args = sys.argv[1:]
