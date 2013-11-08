@@ -38,18 +38,33 @@ function m_i(i::Int)
 end
 
 
-function cheby2n(x, n::Int; kind=1)
+function cheby2n{T<:Number}(x::Array{T, 1}, n::Int; kind::Real=1)
+    # Evaluates the first n+1 Chebyshev polynomials of the 'kind' kind at x
+    # NOTE: This will only work when kind = 1 or kind = 2
+    # NOTE: We evaluate the first n+1, with the first dimension being all 1's
+
+    dim = length(x)
+    results = Array(T, dim, n + 1)
+    results[:, 1] = 1.
+    results[:, 2] = kind * x
+    for i=3:n+1
+        results[:, i] = 2x .* results[:, i - 1] - results[:, i - 2]
+    end
+    return results
+end
+
+
+function cheby2n{T<:Number}(x::Array{T, 2}, n::Int; kind::Real=1)
     # Evaluates the first n+1 Chebyshev polynomials of the 'kind' kind at x
     # NOTE: This will only work when kind = 1 or kind = 2
     # NOTE: We evaluate the first n+1, with the first dimension being all 1's
 
     dim = size(x)
-    results = zeros(n + 1, dim...)
-    results[1, :] = 1.
-    results[2, :] = kind * x
+    results = Array(T, dim..., n + 1)
+    results[:, :, 1] = 1.
+    results[:, :, 2] = kind * x
     for i=3:n+1
-        results[i, :] = (2 * x .* slice_sqz(results, 1, i-1) -
-                         slice_sqz(results, 1, i-2))
+        results[:, :, i] = 2x .* results[:, :, i - 1] - results[:, :, i - 2]
     end
     return results
 end
@@ -251,14 +266,16 @@ function Bmat(sg::SGrid)
     # Compute the matrix B from equation 22 in JMMV 2013
     # Naive translation of dolo.numeric.interpolation.smolyak.SmolyakBasic
 
-    Ts = cheby2n(sg.grid', m_i(sg.mu + 1))
+    # TODO: check to see if I should swap the k and : in reduce. It might be
+    #       more scalable if I do. I would need pass sg.grid' to cheby2n
+
+    Ts = cheby2n(sg.grid, m_i(sg.mu + 1))
     n = size(sg.grid, 1)
     d = sg.d
     b_inds = grid_base(sg.d, sg.mu)
     B = Array(Float64, n, n)
     for ind = 1:n
-        el = slice(b_inds, ind, :)
-        B[:, ind] = reduce(.*, {slice(Ts, el[k], k, :) for k=1:d})
+        B[:, ind] = reduce(.*, {slice(Ts, :, k, b_inds[ind, k]) for k=1:d})
     end
     return B
 end
