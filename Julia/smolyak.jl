@@ -8,9 +8,6 @@ import Base.show
 #- Generic Tools -#
 ## ------------- ##
 
-counting_coef(d, mu, i) = (-1) ^ (d + mu - i) * choose(d - 1, d + mu - i)
-
-
 function num_grid_pts(d::Int, mu::Int)
 
     if mu == 1
@@ -38,25 +35,42 @@ function m_i(i::Int)
 end
 
 
-function cheby2n(x, n::Int; kind=1)
-    # Evaluates the first n+1 Chebyshev polynomials of the 'kind' kind at x
-    # NOTE: This will only work when kind = 1 or kind = 2
-    # NOTE: We evaluate the first n+1, with the first dimension being all 1's
+function cheby2n{T<:Number}(x::Array{T, 1}, n::Int; kind::Real=1)
+    """
+    Evaluates the first n+1 Chebyshev polynomials of the 'kind' kind at x
+    NOTE: This will only work when kind = 1 or kind = 2
+    NOTE: We evaluate the first n+1, with the first dimension being all 1's
+    """
 
-    dim = size(x)
-    results = zeros(n + 1, dim...)
-    results[1, :] = 1.
-    results[2, :] = kind * x
+    dim = length(x)
+    results = Array(T, dim, n + 1)
+    results[:, 1] = 1.
+    results[:, 2] = kind * x
     for i=3:n+1
-        results[i, :] = (2 * x .* slice_sqz(results, 1, i-1) -
-                         slice_sqz(results, 1, i-2))
+        results[:, i] = 2x .* results[:, i - 1] - results[:, i - 2]
     end
     return results
 end
 
 
-function S_n(n::Int)
-    # Compute the set S_n. All points are extrema of Chebyshev polynomials
+function cheby2n{T<:Number}(x::Array{T, 2}, n::Int; kind::Real=1)
+    # Evaluates the first n+1 Chebyshev polynomials of the 'kind' kind at x
+    # NOTE: This will only work when kind = 1 or kind = 2
+    # NOTE: We evaluate the first n+1, with the first dimension being all 1's
+
+    dim = size(x)
+    results = Array(T, dim..., n + 1)
+    results[:, :, 1] = 1.
+    results[:, :, 2] = kind * x
+    for i=3:n+1
+        results[:, :, i] = 2x .* results[:, :, i - 1] - results[:, :, i - 2]
+    end
+    return results
+end
+
+
+function s_n(n::Int)
+    # Compute the set s_n. All points are extrema of Chebyshev polynomials
 
     if n < 1
         error("DomainError: n must be positive")
@@ -76,7 +90,7 @@ function S_n(n::Int)
 end
 
 
-function A_n(n::Int)
+function a_n(n::Int)
     if n < 1
         error("DomainError: n must be positive")
     end
@@ -87,15 +101,15 @@ function A_n(n::Int)
         return [-1., 1.]
     end
 
-    sn = S_n(n)
+    sn = s_n(n)
     return sn[[2:2:size(sn, 1)]]
 end
 
 
-function A_chain(n::Int)
-    # Return Dict of all A_n from n to 1. Keys are n, values are arrays
+function a_chain(n::Int)
+    # Return Dict of all a_n from n to 1. Keys are n, values are arrays
 
-    sn = S_n(n)
+    sn = s_n(n)
 
     a = Dict{Int, Array{Float64, 1}}()
     sizehint(a, n)
@@ -114,48 +128,32 @@ function A_chain(n::Int)
 end
 
 
-function cheb_dict(mu::Int)
-    pts = S_n(mu + 1)
-    max_poly = length(pts)
-
-    # TODO: Work on figuring out the types here
-    # cd = Dict{Int, Dict{Float64, Float64}}()
-    cd = Dict()
-
-    for phi_n=1:max_poly
-        cd[phi_n] = {pt => t_pt for (pt, t_pt) in
-                     zip(pts, cheby_eval(pts, phi_n))}
-    end
-
-    return cd
-end
-
-
-function cheby_eval(x::Array{Float64}, n::Int)
-    pv = ones(size(x)...)
-    cv = x
-
-    if n == 1
-        return pv
-    elseif n == 2
-        return cv
-    else
-        for i=3:n
-            tmp = 2 .* x .* cv - pv
-            pv = cv
-            cv = tmp
-        end
-        return cv
-    end
-end
-
-
 ## --------------- ##
 #- Isotropic Grids -#
 ## --------------- ##
 
 
 function smol_inds(d::Int, mu::Int)
+    """
+    This function finds all of the indices that satisfy the requirement
+    that d \leq \sum_{i=1}^d \leq d + \mu.
+
+    Parameters
+    ==========
+    d : int
+        The number of dimensions in the grid
+
+    mu : int
+        The parameter mu defining the density of the grid
+
+    Returns
+    =======
+    true_inds : Array
+        A 1-d Any array containing all d element arrays satisfying the
+        constraint.
+
+    """
+
     p_vals = [1:mu + 1]
 
     poss_inds = cell(1)  # see below
@@ -180,7 +178,7 @@ function smol_inds(d::Int, mu::Int)
 end
 
 
-function base_inds(n::Int)
+function phi_chain(n::Int)
     max_ind = m_i(n)
     phi = Dict{Int, Array{Int64, 1}}()
     phi[1] = [1]
@@ -200,93 +198,73 @@ function sparse_grid(d::Int, mu::Int)
     # Use disjoint Smolyak sets to construct Smolyak grid
 
     true_inds = smol_inds(d, mu)
-    An = A_chain(mu + 1)
+    An = a_chain(mu + 1)
     return vcat([ cartprod([An[i] for i in el]) for el in true_inds]...)
 end
 
 
-function grid_base(d::Int, mu::Int)
+function poly_inds(d::Int, mu::Int)
     # Build B matrix for interpolating polynomial
 
     true_inds = smol_inds(d, mu)
-    An = base_inds(mu + 1)
-    bs = cell(1)
-    # for el in true_inds
-    #     for ell in cartprod([An[i] for i in el])
-    #         push!(bs, ell)
-    #     end
-    # end
-    # return bs[2:]
-    # return {cartprod([An[i] for i in el]) for el in true_inds}
+    An = phi_chain(mu + 1)
     return vcat([ cartprod([An[i] for i in el]) for el in true_inds]...)
 end
 
-### type SGrid
+### type SmolyakGrid
 
-type SGrid
+type SmolyakGrid
     d::Int
     mu::Int
-    grid::Array{Float64, 2}
+    grid::Matrix{Float64}
     inds::Array{Any, 1}
-
-    function SGrid(d::Int, mu::Int, grid::Array{Float64, 2}, inds::Array{Any, 1})
-        if d < 2
-            error("You passed d = $d. d must be greater than 1")
-        end
-        if mu < 1
-            error("You passed mu = $mu. mu must be greater than 1")
-        end
-        new(d, mu, grid, inds)
-    end
+    B::Matrix{Float64}
+    B_L::Matrix{Float64}
+    B_U::Matrix{Float64}
 end
 
 
 # Add convenience constructor to just pass d, mu
-SGrid(d::Int, mu::Int) = SGrid(d, mu, sparse_grid(d, mu), smol_inds(d, mu))
+function SmolyakGrid(d::Int, mu::Int)
+    if d < 2
+        error("You passed d = $d. d must be greater than 1")
+    end
+    if mu < 1
+        error("You passed mu = $mu. mu must be greater than 1")
+    end
+
+    grid = sparse_grid(d, mu)
+    inds = smol_inds(d, mu)
+    B = build_B(d, mu, grid)
+    lu_B = lu(B)
+    B_L = lu_B[1]
+    B_U = lu_B[2]
+
+    SmolyakGrid(d, mu, grid, inds, B, B_L, B_U)
+end
 
 
-function show(io::IO, sg::SGrid)
+function show(io::IO, sg::SmolyakGrid)
     npoints = size(sg.grid, 1)
     msg = "Smolyak Grid:\n\td: $(sg.d)\n\tmu: $(sg.mu)\n\tnpoints: $npoints"
     print(io, msg)
 end
 
 
-function Bmat(sg::SGrid)
-    # Compute the matrix B from equation 22 in JMMV 2013
-    # Naive translation of dolo.numeric.interpolation.smolyak.SmolyakBasic
+### Build B-matrix for grid object
 
-    Ts = cheby2n(sg.grid', size(sg.grid, 1)  -1)
-    B = cell(1)
-    d = sg.d
-    b_inds = grid_base(sg.d, sg.mu)'
-    for i=1:size(sg.grid, 1)
-        el = slice(b_inds,:, i)
-        push!(B, reduce(.*, {slice(Ts, el[k], k, :) for k=1:d}))
-    end
-    B = hcat(B[2:]...)
-    return B
-end
+function build_B(d::Int, mu::Int, grid::Array{Float64, 2})
+    """
+    Compute the matrix B from equation 22 in JMMV 2013
+    Naive translation of dolo.numeric.interpolation.smolyak.SmolyakBasic
+    """
 
-
-function Bmat2(sg::SGrid)
-    # Compute the matrix B from equation 22 in JMMV 2013
-    # Naive translation of Chase's function
-
-    basis = grid_base(sg.d, sg.mu)
-    grid = sg.grid
-
+    Ts = cheby2n(grid, m_i(mu + 1))
     n = size(grid, 1)
+    b_inds = poly_inds(d, mu)
     B = Array(Float64, n, n)
-
-    chd = cheb_dict(sg.mu)
-
-    for row = 1:n
-        for col = 1:n
-            pt = grid[row, :]
-            f = basis[col, :]
-            B[row, col] = reduce(*, [chd[i][pt[k]] for (k, i) in enumerate(f)])
-        end
+    for ind = 1:n
+        B[:, ind] = reduce(.*, {slice(Ts, :, k, b_inds[ind, k]) for k=1:d})
     end
     return B
 end
@@ -335,7 +313,7 @@ end
 
 
 
-# function plot(sg::SGrid)
+# function plot(sg::SmolyakGrid)
 #     g = sg.grid
 #     if size(g, 2) == 2
 #         PyPlot.plot(g[:, 1], g[:, 2], "b.")
