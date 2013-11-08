@@ -22,6 +22,10 @@ import Base.show
 ## ------------- ##
 
 function num_grid_pts(d::Int, mu::Int)
+    """
+    Uses known polynomials for generating the number of grid points for
+    a given d and mu. As of right now, this only works when mu <= 3.
+    """
 
     if mu == 1
         return int(2d - 1)
@@ -36,6 +40,10 @@ end
 
 
 function m_i(i::Int)
+    """
+    Compute m(i) for a given i. This is defined m_i(1) = 1,
+    m_i(i) = 2^(i-1) + 1 for all i > 1.
+    """
     if i < 0
         error("DomainError: i must be positive")
     elseif i == 0
@@ -83,7 +91,9 @@ end
 
 
 function s_n(n::Int)
-    # Compute the set s_n. All points are extrema of Chebyshev polynomials
+    """
+    Compute the set s_n. All points are extrema of Chebyshev polynomials
+    """
 
     if n < 1
         error("DomainError: n must be positive")
@@ -104,6 +114,9 @@ end
 
 
 function a_n(n::Int)
+    """
+    Compute the nth disjoint set of smolyak points.
+    """
     if n < 1
         error("DomainError: n must be positive")
     end
@@ -120,7 +133,17 @@ end
 
 
 function a_chain(n::Int)
-    # Return Dict of all a_n from n to 1. Keys are n, values are arrays
+    """
+    Return Dict of all A_n from n to 1. Keys are n, values are arrays of
+    points in A_n
+
+    This function improves on other algorithms by noting that A_{n} =
+    S_{n}[evens] except for A_1 = {0} and A_2 = {-1, 1}. Additionally,
+    A_{n} = A_{n+1}[odds] This prevents the calculation of these nodes
+    repeatedly. Thus we only need to calculate biggest of the S_n's to
+    build the sequence of A_n's
+
+    """
 
     sn = s_n(n)
 
@@ -138,6 +161,22 @@ function a_chain(n::Int)
     end
 
     return a
+end
+
+
+function phi_chain(n::Int)
+    max_ind = m_i(n)
+    phi = Dict{Int, Array{Int64, 1}}()
+    phi[1] = [1]
+    phi[2] = [2, 3]
+    low_ind = 4  # current lower index
+    for i = 3:n
+        high_ind = m_i(i)
+        phi[i] = [low_ind:high_ind]
+        low_ind = high_ind + 1
+    end
+
+    return phi
 end
 
 
@@ -163,7 +202,11 @@ function smol_inds(d::Int, mu::Int)
     =======
     true_inds : Array
         A 1-d Any array containing all d element arrays satisfying the
-        constraint.
+        constraint
+
+    Notes
+    =====
+    This function is used directly by build_grid and poly_inds
 
     """
 
@@ -191,24 +234,48 @@ function smol_inds(d::Int, mu::Int)
 end
 
 
-function phi_chain(n::Int)
-    max_ind = m_i(n)
-    phi = Dict{Int, Array{Int64, 1}}()
-    phi[1] = [1]
-    phi[2] = [2, 3]
-    low_ind = 4  # current lower index
-    for i = 3:n
-        high_ind = m_i(i)
-        phi[i] = [low_ind:high_ind]
-        low_ind = high_ind + 1
-    end
+function poly_inds(d::Int, mu::Int)
+    """
+    Build indices specifying all the cartesian products of Chebychev
+    polynomials needed to build smolyak polynomial
 
-    return phi
+    Parameters
+    ==========
+    d : Int
+        The number of dimensions in grid / polynomial
+
+    mu : int
+        The parameter mu defining the density of the grid
+
+    Returns
+    =======
+    phi_inds : Array{Int, 2}
+        A two dimensional array of integers where each row specifies a
+        new set of indices needed to define a smolyak basis polynomial
+
+    Notes
+    =====
+    This function uses smol_inds and phi_chain. The output of this
+    function is used by build_B to construct the B matrix
+
+    """
+
+    true_inds = smol_inds(d, mu)
+    phi_n = phi_chain(mu + 1)
+    return vcat([ cartprod([phi_n[i] for i in el]) for el in true_inds]...)
 end
 
 
-function sparse_grid(d::Int, mu::Int)
-    # Use disjoint Smolyak sets to construct Smolyak grid
+# Build grid
+function build_grid(d::Int, mu::Int)
+    """
+    Use disjoint Smolyak sets to construct Smolyak grid of degree d and
+    density parameter mu
+
+    The return value is an n x d Array, where n is the number of points
+    in the grid
+
+    """
 
     true_inds = smol_inds(d, mu)
     An = a_chain(mu + 1)
@@ -216,13 +283,41 @@ function sparse_grid(d::Int, mu::Int)
 end
 
 
-function poly_inds(d::Int, mu::Int)
-    # Build B matrix for interpolating polynomial
+# Build B-matrix
+function build_B(d::Int, mu::Int, grid::Array{Float64, 2})
+    """
+    Compute the matrix B from equation 22 in JMMV 2013
+    Translation of dolo.numeric.interpolation.smolyak.SmolyakBasic
 
-    true_inds = smol_inds(d, mu)
-    An = phi_chain(mu + 1)
-    return vcat([ cartprod([An[i] for i in el]) for el in true_inds]...)
+    Parameters
+    ==========
+    d : Int
+        The number of dimensions on the grid
+
+    mu : Int
+        The mu parameter used to define grid
+
+    grid : Array{Float64, 2}
+        The smolyak grid returned by calling `build_grid(d, mu)`
+
+    Returns
+    =======
+    B : Array{Float64, 2}
+        The matrix B that represents the Smolyak polynomial
+        corresponding to grid
+
+    """
+
+    Ts = cheby2n(grid, m_i(mu + 1))
+    n = size(grid, 1)
+    b_inds = poly_inds(d, mu)
+    B = Array(Float64, n, n)
+    for ind = 1:n
+        B[:, ind] = reduce(.*, {slice(Ts, :, k, b_inds[ind, k]) for k=1:d})
+    end
+    return B
 end
+
 
 ### type SmolyakGrid
 
@@ -243,7 +338,7 @@ type SmolyakGrid
             error("You passed mu = $mu. mu must be greater than 1")
         end
 
-        grid = sparse_grid(d, mu)
+        grid = build_grid(d, mu)
         inds = smol_inds(d, mu)
         B = build_B(d, mu, grid)
         lu_B = lu(B)
@@ -253,67 +348,21 @@ type SmolyakGrid
         new(d, mu, grid, inds, B, B_L, B_U)
     end
 
-    # Default constructor, just in case
+    # Default constructor, just in case someone gets brave
     function SmolyakGrid(d, mu, grid, inds, B, B_L, B_U)
         new(d, mu, grid, inds, B, B_L, B_U)
     end
 end
 
 
-# Add convenience constructor to just pass d, mu
-# function SmolyakGrid(d::Int, mu::Int)
-#     if d < 2
-#         error("You passed d = $d. d must be greater than 1")
-#     end
-#     if mu < 1
-#         error("You passed mu = $mu. mu must be greater than 1")
-#     end
-
-#     grid = sparse_grid(d, mu)
-#     inds = smol_inds(d, mu)
-#     B = build_B(d, mu, grid)
-#     lu_B = lu(B)
-#     B_L = lu_B[1]
-#     B_U = lu_B[2]
-
-#     SmolyakGrid(d, mu, grid, inds, B, B_L, B_U)
-# end
-
-
 function show(io::IO, sg::SmolyakGrid)
+    "show method for SmolyakGrid type"
     npoints = size(sg.grid, 1)
+    non_zero_pts = nnz(sg.B)
+    pct_non_zero = non_zero_pts / (npoints ^ 2)
     msg = "Smolyak Grid:\n\td: $(sg.d)\n\tmu: $(sg.mu)\n\tnpoints: $npoints"
+    msg *= @sprintf "\n\tB: %.2f%% non-zero" pct_non_zero
     print(io, msg)
-end
-
-
-# Build B-matrix
-
-function build_B(d::Int, mu::Int, grid::Array{Float64, 2})
-    """
-    Compute the matrix B from equation 22 in JMMV 2013
-    Translation of dolo.numeric.interpolation.smolyak.SmolyakBasic
-
-    Parameters
-    ==========
-    d : Int
-        The number of dimensions on the grid
-
-    mu : Int
-        The mu parameter used to define grid
-
-    grid :
-
-    """
-
-    Ts = cheby2n(grid, m_i(mu + 1))
-    n = size(grid, 1)
-    b_inds = poly_inds(d, mu)
-    B = Array(Float64, n, n)
-    for ind = 1:n
-        B[:, ind] = reduce(.*, {slice(Ts, :, k, b_inds[ind, k]) for k=1:d})
-    end
-    return B
 end
 
 
