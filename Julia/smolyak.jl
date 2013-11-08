@@ -221,21 +221,27 @@ type SmolyakGrid
     B::Matrix{Float64}
     B_L::Matrix{Float64}
     B_U::Matrix{Float64}
-
-    function SmolyakGrid(d::Int, mu::Int, grid::Array{Float64, 2}, inds::Array{Any, 1})
-        if d < 2
-            error("You passed d = $d. d must be greater than 1")
-        end
-        if mu < 1
-            error("You passed mu = $mu. mu must be greater than 1")
-        end
-        new(d, mu, grid, inds)
-    end
 end
 
 
 # Add convenience constructor to just pass d, mu
-SmolyakGrid(d::Int, mu::Int) = SmolyakGrid(d, mu, sparse_grid(d, mu), smol_inds(d, mu))
+function SmolyakGrid(d::Int, mu::Int)
+    if d < 2
+        error("You passed d = $d. d must be greater than 1")
+    end
+    if mu < 1
+        error("You passed mu = $mu. mu must be greater than 1")
+    end
+
+    grid = sparse_grid(d, mu)
+    inds = smol_inds(d, mu)
+    B = build_B(d, mu, grid)
+    lu_B = lu(B)
+    B_L = lu_B[1]
+    B_U = lu_B[2]
+
+    SmolyakGrid(d, mu, grid, inds, B, B_L, B_U)
+end
 
 
 function show(io::IO, sg::SmolyakGrid)
@@ -247,18 +253,14 @@ end
 
 ### Build B-matrix for grid object
 
-function build_B(sg::SmolyakGrid)
+function build_B(d::Int, mu::Int, grid::Array{Float64, 2})
     """
     Compute the matrix B from equation 22 in JMMV 2013
     Naive translation of dolo.numeric.interpolation.smolyak.SmolyakBasic
     """
 
-    # Pull out some things we need
-    d = sg.d
-    mu = sg.mu
-
-    Ts = cheby2n(sg.grid, m_i(mu + 1))
-    n = size(sg.grid, 1)
+    Ts = cheby2n(grid, m_i(mu + 1))
+    n = size(grid, 1)
     b_inds = poly_inds(d, mu)
     B = Array(Float64, n, n)
     for ind = 1:n
