@@ -4,24 +4,32 @@ it will eventually contain the interpolation routines necessary so that
 the given some data, this class can build a grid and use the Chebyshev
 polynomials to interpolate and approximate the data.
 
+Current Status:
+    Building grid: Done
+    Building basis polynomials: Done
+    Building the interpolation matrix, B : Done
+    Add Interpolation functionality: TODO
+    Add linear transformation interpolation: TODO
+    Add other interesting pieces: TODO
+
 Method based on Judd, Maliar, Maliar, Valero 2013 (W.P)
 
-Author: Chase Coleman and Spencer Lyon
+Authors: Chase Coleman and Spencer Lyon
 """
-from operator import mul
 import sys
 import numpy as np
 import numpy.linalg as la
 import matplotlib.pyplot as plt
+import time as time
+import pandas as pd
 from mpl_toolkits.mplot3d import Axes3D
 from itertools import product, combinations_with_replacement, permutations
 from itertools import chain
-import time as time
-from dolo.numeric.interpolation import smolyak as smm
-import pandas as pd
+from smolyak_utils import *
+from operator import mul
 
 
-class Smoly_grid(object):
+class SmolyakGrid(object):
     """
     This class currently takes a dimension and a degree of polynomial
     and builds the Smolyak Sparse grid.  We base this on the work by
@@ -40,10 +48,41 @@ class Smoly_grid(object):
 
     Methods:
     --------
-    grid_build : This method builds the sparse grid
+
+    a_chain : This builds the disjoint sets of basis points
+
+    _s_n : This builds the joint set of all basis points
+
+    _smol_inds : This constructs the indices that satisfy the
+                      constraint d <= |i| <= d + mu
+
+    sparse_grid : This method builds the sparse grid
+
+    phi_chain : Builds the disjoint sets of basis polynomials subscripts
+                 (1, 2) = \phi_1 \phi_2 etc...
+
+    poly_inds : Combines the basis polynomials in a similar
+                              fashion as sparse_grid wrt to points
+
+    _build_B : Builds the B matrix that will be used to interpolate
+
+    plot_grid : Pretty obvious the function of this method... Plots grid
+
+    Attributes:
+    -----------
+
+    d::Int
+    mu::Int
+    grid::Array{Float64, 2}
+    inds::Array{Any, 1}
+    B:Matrix{Float64}
+    B_L:Matrix{Float64}
+    B_U:Matrix{Float64}
+    coeffs
 
     """
-    def __init__(self, d, mu):
+
+    def __init__(self, d, mu, do="all"):
         """
         Parameters
         ----------
@@ -53,6 +92,11 @@ class Smoly_grid(object):
         mu : scalar : integer
             mu is a parameter that defines the fineness of grid that we
             want to build
+
+        do : string : string
+            do specifies whether you just want to build the grid or
+            whether it should build the whole object.  Only takes values
+            of "all" or "grid".  Default is "all"
         """
         self.d = d
         self.mu = mu
@@ -64,11 +108,18 @@ class Smoly_grid(object):
             raise ValueError('You are trying to build a one dimensional\
                              grid.')
 
-        self.build_sparse_grid()
-        self.build_basis_polynomials()
-        # self._build_B()
+        self.sparse_grid()
+        if do=="all":
+            self._build_B()
 
-    def _find_A_n(self, n):
+    def __repr__(self):
+        msg = "Smolyak Grid:\n\td: {0} \n\tmu: {1} \n\tnpoints: {2}"
+        return msg.format(self.d, self.mu, self.grid.shape[0])
+
+    def __str__(self):
+        return str(self.__repr__)
+
+    def a_chain(self, n):
         """
         This method finds all of the unidimensional disjoint sets
         that we will use to construct the grid.  It improves on
@@ -80,7 +131,7 @@ class Smoly_grid(object):
         """
 
         # # Start w finding the biggest Sn(We will subsequently reduce it)
-        Sn = self._find_S_n(n)
+        Sn = self._s_n(n)
 
         # Save to be used later in evaluations
         self.Sn = Sn
@@ -97,12 +148,9 @@ class Smoly_grid(object):
             # A_chain.append(list(Sn[range(1, num, 2)]))
             Sn = Sn[range(0, num, 2)]
 
-        self.a_chain = A_chain
-
-
         return A_chain
 
-    def _find_S_n(self, n):
+    def _s_n(self, n):
         """
         This method finds the element S_n for the Chebyshev Extrema
         """
@@ -123,7 +171,7 @@ class Smoly_grid(object):
 
         return vals
 
-    def _find_smol_inds(self):
+    def _smol_inds(self):
         """
         This method finds all of the indices that satisfy the requirement
         that d \leq \sum_{i=1}^d \leq d + \mu.  Once we have these, then
@@ -141,14 +189,12 @@ class Smoly_grid(object):
         poss_inds = [el for el in combinations_with_replacement(possible_values, d) \
                       if d<sum(el)<=d+mu]
 
-        true_inds = []
-
         true_inds = [[el for el in permute(list(val))] for val in poss_inds]
-
 
         # Add the d dimension 1 array so that we don't repeat it a bunch
         # of times
         true_inds.extend([[[1]*d]])
+
 
         tinds = list(chain.from_iterable(true_inds))
 
@@ -156,7 +202,7 @@ class Smoly_grid(object):
 
         return tinds
 
-    def build_sparse_grid(self):
+    def sparse_grid(self):
         """
         This method builds a grid for the object
         """
@@ -164,13 +210,13 @@ class Smoly_grid(object):
         mu = self.mu
 
         # Get An chain
-        An = self._find_A_n(mu + 1)
+        An = self.a_chain(mu + 1)
 
         points = []
 
         # Need to get the correct indices
 
-        tinds = self._find_smol_inds()
+        tinds = self._smol_inds()
 
         for el in tinds:
             temp = [An[i] for i in el]
@@ -184,25 +230,7 @@ class Smoly_grid(object):
 
         return grid
 
-    def calc_chebvals(self):
-        """
-        We will eventually need the chebyshev polynomials evaluated at
-        every poiOnt that we calculate in the grid.  We will find them
-        and store them in a dictionary of dictionaries.  The outer dict
-        will say which chebyshev polynomial it is and the inner dict
-        will have each point evaluated in it.
-        """
-        pts = self._find_S_n(self.mu + 1)  # TODO: save this when we call _find_A_n
-        max_poly = pts.size  # Chase: Check this. I think this is fine
-
-        cheb_dict = {}
-        for phi_n in xrange(1, max_poly + 1):
-            cheb_dict[phi_n] = {pt: t_pt for (pt, t_pt) in
-                                zip(pts, cheby_eval(pts, phi_n))}
-
-        return cheb_dict
-
-    def _find_aphi(self, n):
+    def phi_chain(self, n):
         """
         Finds the disjoint sets of aphi's that will be used to compute
         which functions we need to calculate
@@ -227,16 +255,16 @@ class Smoly_grid(object):
 
         return aphi_chain
 
-    def build_basis_polynomials(self):
+    def poly_inds(self):
         """
-        This function builds the base polynomials that will be used to
-        interpolate.
+        This function builds the indices of the basis polynomials that
+        will be used to interpolate.
         """
         d = self.d
         mu = self.mu
 
         smol_inds = self.smol_inds
-        aphi = self._find_aphi(mu + 1)
+        aphi = self.phi_chain(mu + 1)
 
         # Bring in polynomials
         # cheb_dict = self.calc_chebvals()
@@ -250,16 +278,19 @@ class Smoly_grid(object):
             # inds.append(el)
             base_polys.extend(list(product(*temp)))
 
-        self.base_polys = base_polys
-
         return base_polys
 
     def _build_B(self):
+        """
+        This function builds the matrix B that will be used to calc
+        the interpolation coefficients for a given set of data.
+        """
         Ts = chebychev(self.grid.T, m_i(self.mu + 1))
+        base_polys = self.poly_inds()
         n = len(self.grid)
-        B = np.empty((n, n), order='C')
-        for ind, comb in enumerate(self.base_polys):
-            B[ind, :] = reduce(mul, [Ts[comb[i] - 1, i, :]
+        B = np.empty((n, n), order='F')
+        for ind, comb in enumerate(base_polys):
+            B[:, ind] = reduce(mul, [Ts[comb[i] - 1, i, :]
                                for i in range(self.d)])
         self.B = B
         return B
@@ -288,117 +319,15 @@ class Smoly_grid(object):
             raise ValueError('Can only plot 2 or 3 dimensional problems')
 
 
-def cheby_eval(x, n):
-    past_val = np.ones_like(x)
-    curr_val = x
-
-    if n == 1:
-        return past_val
-
-    if n == 2:
-        return curr_val
-
-    for i in xrange(3, n + 1):
-        temp = 2*x*curr_val - past_val
-        past_val = curr_val
-        curr_val = temp
-
-    return curr_val
-
-
-def chebychev(x, n):
-    # computes the chebychev polynomials of the first kind
-    dim = x.shape
-    results = np.zeros((n+1, ) + dim)
-    results[0, ...] = np.ones(dim)
-    results[1, ...] = x
-    for i in range(2,n+1):
-        results[i,...] = 2 * x * results[i-1,...] - results[i-2,...]
-    return results
-
-
-def permute(a):
-    """
-    Creates all unique combinations of a list a that is passed in.
-    Function is based off of a function written by John Lettman:
-    TCHS Computer Information Systems.  My thanks to him.
-    """
-
-    a.sort() # Sort.
-
-    ## Output the first input sorted.
-    yield list(a)
-
-    i = 0
-    first = 0
-    alen = len(a)
-
-    ## "alen" could also be used for the reference to the last element.
-
-    while(True):
-        i = alen - 1
-
-        while(True):
-            i -= 1 # i--
-
-            if(a[i] < a[(i + 1)]):
-                j = alen - 1
-
-                while(not (a[i] < a[j])): j -= 1 # j--
-
-                a[i], a[j] = a[j], a[i] # swap(a[j], a[i])
-                t = a[(i + 1):alen]
-                t.reverse()
-                a[(i + 1):alen] = t
-
-                # Output current.
-                yield list(a)
-
-                break # next.
-
-            if(i == first):
-                a.reverse()
-
-                # yield list(a)
-                return
-
-
-def check_points(d, mu):
-    if mu == 1:
-        return 2*d + 1
-
-    if mu == 2:
-        return 1 + 4*d + 4*d*(d-1)/2.
-
-    if mu == 3:
-        return 1 + 8*d + 12*d*(d-1)/2. + 8*d*(d-1)*(d-2)/6.
-
-
-def m_i(i):
-    if i < 0:
-        raise ValueError('i must be positive')
-    elif i == 0:
-        return 0
-    elif i == 1:
-        return 1
-    else:
-        return 2**(i - 1) + 1
-
-
 my_args = sys.argv[1:]
 
 if __name__ == '__main__':
 
     for d, mu in [(20, 2), (10, 3), (20, 3)]:
-        s = Smoly_grid(d, mu)
-        print(s.build_sparse_grid().shape, check_points(d, mu))
+        s = SmolyakGrid(d, mu, do="grid")
+        print(s.sparse_grid().shape, num_grid_points(d, mu))
 
 if 'prof' in my_args or 'profile' in my_args:
     import cProfile
-    cProfile.run("s.build_sparse_grid()")
+    cProfile.run("s.sparse_grid()")
     cProfile.run("smm.smolyak_grids(d, mu)")
-
-
-
-
-
