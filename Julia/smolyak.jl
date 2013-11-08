@@ -322,13 +322,13 @@ end
 ### type SmolyakGrid
 
 type SmolyakGrid
-    d::Int
-    mu::Int
-    grid::Matrix{Float64}
-    inds::Array{Any, 1}
-    B::Matrix{Float64}
-    B_L::Matrix{Float64}
-    B_U::Matrix{Float64}
+    d::Int  # number of dimensions
+    mu::Int  # density parameter
+    grid::Matrix{Float64}  # Smolyak grid
+    inds::Array{Any, 1}  # Smolyak indices
+    B::Matrix{Float64}  # matrix representing interpoland
+    B_L::Matrix{Float64}  # L from LU decomposition of B
+    B_U::Matrix{Float64}  # U from LU decomposition of B
 
     function SmolyakGrid(d::Int, mu::Int)
         if d < 2
