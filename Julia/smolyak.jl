@@ -1,3 +1,16 @@
+"""
+This file contains a class that builds a Smolyak Grid.  The hope is that
+it will eventually contain the interpolation routines necessary so that
+the given some data, this class can build a grid and use the Chebyshev
+polynomials to interpolate and approximate the data.
+
+Method based on Judd, Maliar, Maliar, Valero 2013 (W.P)
+
+Date: Fri Oct 18 07:47:11 2013 -0700
+
+Author: Chase Coleman and Spencer Lyon
+"""
+
 using Iterators
 using Cartesian
 # import PyPlot
@@ -221,27 +234,50 @@ type SmolyakGrid
     B::Matrix{Float64}
     B_L::Matrix{Float64}
     B_U::Matrix{Float64}
+
+    function SmolyakGrid(d::Int, mu::Int)
+        if d < 2
+            error("You passed d = $d. d must be greater than 1")
+        end
+        if mu < 1
+            error("You passed mu = $mu. mu must be greater than 1")
+        end
+
+        grid = sparse_grid(d, mu)
+        inds = smol_inds(d, mu)
+        B = build_B(d, mu, grid)
+        lu_B = lu(B)
+        B_L = lu_B[1]
+        B_U = lu_B[2]
+
+        new(d, mu, grid, inds, B, B_L, B_U)
+    end
+
+    # Default constructor, just in case
+    function SmolyakGrid(d, mu, grid, inds, B, B_L, B_U)
+        new(d, mu, grid, inds, B, B_L, B_U)
+    end
 end
 
 
 # Add convenience constructor to just pass d, mu
-function SmolyakGrid(d::Int, mu::Int)
-    if d < 2
-        error("You passed d = $d. d must be greater than 1")
-    end
-    if mu < 1
-        error("You passed mu = $mu. mu must be greater than 1")
-    end
+# function SmolyakGrid(d::Int, mu::Int)
+#     if d < 2
+#         error("You passed d = $d. d must be greater than 1")
+#     end
+#     if mu < 1
+#         error("You passed mu = $mu. mu must be greater than 1")
+#     end
 
-    grid = sparse_grid(d, mu)
-    inds = smol_inds(d, mu)
-    B = build_B(d, mu, grid)
-    lu_B = lu(B)
-    B_L = lu_B[1]
-    B_U = lu_B[2]
+#     grid = sparse_grid(d, mu)
+#     inds = smol_inds(d, mu)
+#     B = build_B(d, mu, grid)
+#     lu_B = lu(B)
+#     B_L = lu_B[1]
+#     B_U = lu_B[2]
 
-    SmolyakGrid(d, mu, grid, inds, B, B_L, B_U)
-end
+#     SmolyakGrid(d, mu, grid, inds, B, B_L, B_U)
+# end
 
 
 function show(io::IO, sg::SmolyakGrid)
@@ -251,12 +287,23 @@ function show(io::IO, sg::SmolyakGrid)
 end
 
 
-### Build B-matrix for grid object
+# Build B-matrix
 
 function build_B(d::Int, mu::Int, grid::Array{Float64, 2})
     """
     Compute the matrix B from equation 22 in JMMV 2013
-    Naive translation of dolo.numeric.interpolation.smolyak.SmolyakBasic
+    Translation of dolo.numeric.interpolation.smolyak.SmolyakBasic
+
+    Parameters
+    ==========
+    d : Int
+        The number of dimensions on the grid
+
+    mu : Int
+        The mu parameter used to define grid
+
+    grid :
+
     """
 
     Ts = cheby2n(grid, m_i(mu + 1))
