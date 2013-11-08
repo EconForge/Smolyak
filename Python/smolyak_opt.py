@@ -4,25 +4,16 @@ it will eventually contain the interpolation routines necessary so that
 the given some data, this class can build a grid and use the Chebyshev
 polynomials to interpolate and approximate the data.
 
-Current Status:
-    Building grid: Done
-    Building basis polynomials: Done
-    Building the interpolation matrix, B : Done
-    Add Interpolation functionality: TODO
-    Add linear transformation interpolation: TODO
-    Add other interesting pieces: TODO
-
 Method based on Judd, Maliar, Maliar, Valero 2013 (W.P)
 
 Authors: Chase Coleman and Spencer Lyon
+
 """
 import sys
-import time as time
 from operator import mul
-from itertools import product, combinations_with_replacement, permutations
+from itertools import product, combinations_with_replacement
 from itertools import chain
 import numpy as np
-import numpy.linalg as la
 from scipy.linalg import lu
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -101,15 +92,15 @@ class SmolyakGrid(object):
         self.d = d
         self.mu = mu
 
-        if mu<1:
+        if mu < 1:
             raise ValueError('The parameter mu needs to be > 1.')
 
-        if d<=1:
+        if d <= 1:
             raise ValueError('You are trying to build a one dimensional\
                              grid.')
 
         self.build_grid()
-        if do=="all":
+        if do == "all":
             self.build_B()
 
     def __repr__(self):
@@ -153,7 +144,7 @@ class SmolyakGrid(object):
         This method finds the element S_n for the Chebyshev Extrema
         """
 
-        if n==1:
+        if n == 1:
             return np.array([0.])
 
         # Apply the necessary transformation to get the nested sequence
@@ -188,15 +179,14 @@ class SmolyakGrid(object):
 
         # find all (i1, i2, ... id) such that their sum is in range
         # we want; this will cut down on later iterations
-        poss_inds = [el for el in combinations_with_replacement(possible_values, d) \
-                      if d<sum(el)<=d+mu]
+        poss_inds = [el for el in combinations_with_replacement(possible_values, d)
+                      if d < sum(el) <= d+mu]
 
         true_inds = [[el for el in permute(list(val))] for val in poss_inds]
 
         # Add the d dimension 1 array so that we don't repeat it a bunch
         # of times
         true_inds.extend([[[1]*d]])
-
 
         tinds = list(chain.from_iterable(true_inds))
 
@@ -212,7 +202,6 @@ class SmolyakGrid(object):
         =====
         This method sets the attribute grid
         """
-        d = self.d
         mu = self.mu
 
         # Get An chain
@@ -241,10 +230,6 @@ class SmolyakGrid(object):
         Finds the disjoint sets of aphi's that will be used to compute
         which functions we need to calculate
         """
-        # Need to find which is biggest function that is going to be
-        # called is
-        max_ind = 2**(n-1) + 1
-
 
         # First create a dictionary
         aphi_chain = {}
@@ -266,7 +251,6 @@ class SmolyakGrid(object):
         This function builds the indices of the basis polynomials that
         will be used to interpolate.
         """
-        d = self.d
         mu = self.mu
 
         smol_inds = self.smol_inds
@@ -295,7 +279,7 @@ class SmolyakGrid(object):
         =====
         This method sets the attributes B, B_L, B_U
         """
-        Ts = chebychev(self.grid.T, m_i(self.mu + 1))
+        Ts = cheby2n(self.grid.T, m_i(self.mu + 1))
         base_polys = self.poly_inds()
         n = len(self.grid)
         B = np.empty((n, n), order='F')
@@ -312,7 +296,6 @@ class SmolyakGrid(object):
         return B
 
     def plot_grid(self):
-        import matplotlib.pyplot as plt
         grid = self.grid
         if grid.shape[1] == 2:
             xs = grid[:, 0]
@@ -320,7 +303,7 @@ class SmolyakGrid(object):
             fig = plt.figure()
             ax = fig.add_subplot(111)
             ax.scatter(xs, ys)
-            ax.grid(True, linestyle='--',color='0.75')
+            ax.grid(True, linestyle='--', color='0.75')
             plt.show()
         elif grid.shape[1] == 3:
             xs = grid[:, 0]
@@ -329,7 +312,7 @@ class SmolyakGrid(object):
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d')
             ax.scatter(xs, ys, zs)
-            ax.grid(True, linestyle='--',color='0.75')
+            ax.grid(True, linestyle='--', color='0.75')
             plt.show()
         else:
             raise ValueError('Can only plot 2 or 3 dimensional problems')
