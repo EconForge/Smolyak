@@ -17,16 +17,17 @@ Method based on Judd, Maliar, Maliar, Valero 2013 (W.P)
 Authors: Chase Coleman and Spencer Lyon
 """
 import sys
-import numpy as np
-import numpy.linalg as la
-import matplotlib.pyplot as plt
 import time as time
-import pandas as pd
-from mpl_toolkits.mplot3d import Axes3D
+from operator import mul
 from itertools import product, combinations_with_replacement, permutations
 from itertools import chain
+import numpy as np
+import numpy.linalg as la
+from scipy.linalg import lu
+import matplotlib.pyplot as plt
+import pandas as pd
+from mpl_toolkits.mplot3d import Axes3D
 from smolyak_utils import *
-from operator import mul
 
 
 class SmolyakGrid(object):
@@ -56,29 +57,28 @@ class SmolyakGrid(object):
     _smol_inds : This constructs the indices that satisfy the
                       constraint d <= |i| <= d + mu
 
-    sparse_grid : This method builds the sparse grid
+    build_grid : This method builds the sparse grid
 
     phi_chain : Builds the disjoint sets of basis polynomials subscripts
                  (1, 2) = \phi_1 \phi_2 etc...
 
     poly_inds : Combines the basis polynomials in a similar
-                              fashion as sparse_grid wrt to points
+                              fashion as build_grid wrt to points
 
-    _build_B : Builds the B matrix that will be used to interpolate
+    build_B : Builds the B matrix that will be used to interpolate
 
     plot_grid : Pretty obvious the function of this method... Plots grid
 
     Attributes:
     -----------
 
-    d::Int
-    mu::Int
-    grid::Array{Float64, 2}
-    inds::Array{Any, 1}
-    B:Matrix{Float64}
-    B_L:Matrix{Float64}
-    B_U:Matrix{Float64}
-    coeffs
+    d::Int  # number of dimensions
+    mu::Int  # density parameter
+    grid::Matrix{Float64}  # Smolyak grid
+    inds::Array{Any, 1}  # Smolyak indices
+    B::Matrix{Float64}  # matrix representing interpoland
+    B_L::Matrix{Float64}  # L from LU decomposition of B
+    B_U::Matrix{Float64}  # U from LU decomposition of B
 
     """
 
@@ -108,9 +108,9 @@ class SmolyakGrid(object):
             raise ValueError('You are trying to build a one dimensional\
                              grid.')
 
-        self.sparse_grid()
+        self.build_grid()
         if do=="all":
-            self._build_B()
+            self.build_B()
 
     def __repr__(self):
         msg = "Smolyak Grid:\n\td: {0} \n\tmu: {1} \n\tnpoints: {2}"
@@ -128,13 +128,11 @@ class SmolyakGrid(object):
         This prevents the calculation of these nodes repeatedly.  Thus
         we only need to calculate biggest of the S_n's to build the
         sequence of A_n's
+
         """
 
         # # Start w finding the biggest Sn(We will subsequently reduce it)
         Sn = self._s_n(n)
-
-        # Save to be used later in evaluations
-        self.Sn = Sn
 
         A_chain = {}
         A_chain[1] = [0.]
@@ -177,6 +175,10 @@ class SmolyakGrid(object):
         that d \leq \sum_{i=1}^d \leq d + \mu.  Once we have these, then
         they can be used to build both the grid and the polynomial
         basis.
+
+        Notes
+        =====
+        This method sets the attribute smol_inds
         """
         d = self.d
         mu = self.mu
@@ -202,9 +204,13 @@ class SmolyakGrid(object):
 
         return tinds
 
-    def sparse_grid(self):
+    def build_grid(self):
         """
         This method builds a grid for the object
+
+        Notes
+        =====
+        This method sets the attribute grid
         """
         d = self.d
         mu = self.mu
@@ -280,10 +286,14 @@ class SmolyakGrid(object):
 
         return base_polys
 
-    def _build_B(self):
+    def build_B(self):
         """
         This function builds the matrix B that will be used to calc
         the interpolation coefficients for a given set of data.
+
+        Notes
+        =====
+        This method sets the attributes B, B_L, B_U
         """
         Ts = chebychev(self.grid.T, m_i(self.mu + 1))
         base_polys = self.poly_inds()
@@ -293,6 +303,12 @@ class SmolyakGrid(object):
             B[:, ind] = reduce(mul, [Ts[comb[i] - 1, i, :]
                                for i in range(self.d)])
         self.B = B
+
+        # Compute LU decomposition
+        l, u = lu(B, True)  # pass permute_l as true. See scipy docs
+        self.B_L = l
+        self.B_U = u
+
         return B
 
     def plot_grid(self):
@@ -325,9 +341,9 @@ if __name__ == '__main__':
 
     for d, mu in [(20, 2), (10, 3), (20, 3)]:
         s = SmolyakGrid(d, mu, do="grid")
-        print(s.sparse_grid().shape, num_grid_points(d, mu))
+        print(s.build_grid().shape, num_grid_points(d, mu))
 
 if 'prof' in my_args or 'profile' in my_args:
     import cProfile
-    cProfile.run("s.sparse_grid()")
+    cProfile.run("s.build_grid()")
     cProfile.run("smm.smolyak_grids(d, mu)")
