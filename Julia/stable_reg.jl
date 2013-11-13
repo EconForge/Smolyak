@@ -206,14 +206,3 @@ function RLAD_PP(X, Y, penalty=7)
     return B
 
 end
-
-
-
-### Below is a test suite to compare answers to those from MATLAB
-"""
-reload("stable_reg.jl")
-using MAT
-ml = matread("/Users/sglyon/Desktop/num_stab_approxMATLAB.mat")
-X = ml["X"]
-Y = ml["Y"]
-"""
