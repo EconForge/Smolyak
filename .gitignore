@@ -1,2 +1,72 @@
+## LaTeX ignores
+*.fls
+*.acn
+*.acr
+*.alg
+*.aux
+*.bbl
+*.blg
+*.dvi
+*.fdb_latexmk
+*.glg
+*.glo
+*.gls
+*.idx
+*.ilg
+*.ind
+*.ist
+*.lof
+*.log
+*.lot
+*.maf
+*.mtc
+*.mtc0
+*.nav
+*.nlo
+*.out
+*.pdfsync
+*.ps
+*.snm
+*.synctex.gz
+*.toc
+*.vrb
+*.xdy
+*.tdo
+*.bcf
+*.run.xml
+
+## Python ignores
+*.pyc
+*.pyw
+*.so
+.ipynb_checkpoints/
+
+## Cython ignores
 build/
 *.so
+
+## org-mode ignores
+*.html
+*~
+*#
+*.mm
+
+## .DS_Store
+*.DS_Store
+*.mat
+
+## Let's ignore eps files (png is sufficient)
+*.eps
+*eps-converted-to.pdf
+
+*.Rapp.history
+*.loe
+*.upa
+*.upb
+*.gnuplot
+*.table
+*_files/
+*.pytxcode
+*.pytxmcr
+*.pytxpyg
+*.pkl

@@ -34,14 +34,14 @@ function de_normalize(X, Y, beta)
     term.
 
     """
-    # De-normalize the coefficients
+    # Allocate memory for new coefs
     T, n = size(X)
     B = Array(Float64, size(beta, 1) + 1, size(beta, 2))
 
-    # Infer de-normalized coefficients
+    # Infer de-normalized slope coefficients
     B[2:end, :] = (1. / std(X[:,2:n], 1)') * std(Y) .* beta
 
-    # Infer intercept term from others.
+    # Infer intercept from others.
     B[1, :] = mean(Y) - mean(X[:, 2:n], 1) * B[2:end, :]
 
     return B
@@ -206,14 +206,3 @@ function RLAD_PP(X, Y, penalty=7)
     return B
 
 end
-
-
-
-### Below is a test suite to compare answers to those from MATLAB
-"""
-reload("stable_reg.jl")
-using MAT
-ml = matread("/Users/sglyon/Desktop/num_stab_approxMATLAB.mat")
-X = ml["X"]
-Y = ml["Y"]
-"""
