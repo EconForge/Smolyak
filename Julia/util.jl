@@ -1,22 +1,5 @@
-# module util
-
 import Cartesian
 
-# export choose, slice_sqz, pmute, cartprod, cartesian, comb_with_replacement
-
-choose(n, k) = factorial(n) / (factorial(k) * factorial(n - k))
-
-# takes the ith slice of A in the dth dimension and squeezes along d
-slice_sqz(A, d, i) = squeeze(slicedim(A, d, i), d)
-
-
-# type Permute
-#     a::Union(Array{Float64, 1}, Array{Int64, 1})
-#     # i::Int64
-# end
-
-# start(x::Permute) = x.a
-# done(x::Permute, state) = x.a .== state || x.a .== next(x, state)  # TODO: we need to decide on which one to use!
 
 function pmute(a::Union(Array{Float64, 1}, Array{Int64, 1}))
     # Return all unique permutations of the vector a, which must be a 1d
@@ -221,5 +204,3 @@ function all_close(x::Array, y::Array, rtol::Float64=1.e-5, atol::Float64=1.e-8)
     return all(.<=(abs(x - y), atol + rtol * abs(y)))
 end
 
-
-# end # module

@@ -19,7 +19,7 @@ def cheby_eval(x, n):
     return curr_val
 
 
-def chebychev(x, n):
+def cheby2n(x, n):
     # computes the chebychev polynomials of the first kind
     dim = x.shape
     results = np.zeros((n+1, ) + dim)
