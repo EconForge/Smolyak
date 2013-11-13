@@ -14,7 +14,7 @@ Author: Chase Coleman and Spencer Lyon
 using Iterators
 using Cartesian
 # import PyPlot
-reload("util")
+require("util")
 import Base.show
 
 ## ------------- ##
@@ -406,7 +406,6 @@ function smol_inds(d::Int, mu::Array{Int, 1})
 
     return true_inds
 end
-
 
 
 # function plot(sg::SmolyakGrid)
