@@ -18,7 +18,7 @@ from scipy.linalg import lu
 import matplotlib.pyplot as plt
 import pandas as pd
 from mpl_toolkits.mplot3d import Axes3D
-from smolyak_utils import *
+from util import *
 
 
 def a_chain(n):
@@ -31,6 +31,16 @@ def a_chain(n):
     we only need to calculate biggest of the S_n's to build the
     sequence of A_n's
 
+    Parameters
+    ----------
+    n : scalar : integer
+      This is the number of disjoint sets from Sn that this should make
+
+    Returns
+    -------
+    A_chain : dictionary : lists
+      This is a dictionary of the disjoint sets that are made.  They are
+      indexed by the integer corresponding
     """
 
     # # Start w finding the biggest Sn(We will subsequently reduce it)
@@ -246,8 +256,8 @@ class SmolyakGrid(object):
     Judd Maliar Maliar and Valero.  Hope to obtain speed ups beyond
     what they achieved.
 
-    Attributes:
-    ------------------
+    Parameters
+    ----------
     d : scalar : integer
         This is the dimension of grid that you are building
 
@@ -255,58 +265,42 @@ class SmolyakGrid(object):
         mu is a parameter that defines the fineness of grid that we
         want to build
 
+    do : str, optional(default='all')
+        do specifies whether you just want to build the grid or
+        whether it should build the whole object.  Only takes values
+        of "all" or "grid".  Default is "all"
 
-    Methods:
+    Attributes
+    ----------
+    d : scalar : integer
+        This is the dimension of grid that you are building
+
+    mu : scalar : integer
+        mu is a parameter that defines the fineness of grid that we
+        want to build
+
+    grid : np.ndarray : floats
+        This is the sparse grid that we need to build
+
+    inds : list : list
+        This is a lists of lists that contains all of the indices
+
+    B : np.ndarray : floats
+        This is the B matrix that is used to do lagrange interpolation
+
+    B_L : np.ndarray : floats
+        Lower triangle matrix of the decomposition of B
+
+    B_U : np.ndarray : floats
+        Upper triangle matrix of the decomposition of B
+
+    Examples
     --------
-
-    a_chain : This builds the disjoint sets of basis points
-
-    _s_n : This builds the joint set of all basis points
-
-    _smol_inds : This constructs the indices that satisfy the
-                      constraint d <= |i| <= d + mu
-
-    build_grid : This method builds the sparse grid
-
-    phi_chain : Builds the disjoint sets of basis polynomials subscripts
-                 (1, 2) = \phi_1 \phi_2 etc...
-
-    poly_inds : Combines the basis polynomials in a similar
-                              fashion as build_grid wrt to points
-
-    build_B : Builds the B matrix that will be used to interpolate
-
-    plot_grid : Pretty obvious the function of this method... Plots grid
-
-    Attributes:
-    -----------
-
-    d::Int  # number of dimensions
-    mu::Int  # density parameter
-    grid::Matrix{Float64}  # Smolyak grid
-    inds::Array{Any, 1}  # Smolyak indices
-    B::Matrix{Float64}  # matrix representing interpoland
-    B_L::Matrix{Float64}  # L from LU decomposition of B
-    B_U::Matrix{Float64}  # U from LU decomposition of B
+    s = SmolyakGrid(3, 2)
 
     """
 
     def __init__(self, d, mu, do="all"):
-        """
-        Parameters
-        ----------
-        d : scalar : integer
-            This is the dimension of grid that you are building
-
-        mu : scalar : integer
-            mu is a parameter that defines the fineness of grid that we
-            want to build
-
-        do : string : string
-            do specifies whether you just want to build the grid or
-            whether it should build the whole object.  Only takes values
-            of "all" or "grid".  Default is "all"
-        """
         self.d = d
         self.mu = mu
 
@@ -337,6 +331,11 @@ class SmolyakGrid(object):
         return str(self.__repr__)
 
     def plot_grid(self):
+        """
+        This is a simple function that beautifully plots the grid for
+        the 2 and 3d cases
+
+        """
         grid = self.grid
         if grid.shape[1] == 2:
             xs = grid[:, 0]
