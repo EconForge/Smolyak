@@ -1,5 +1,5 @@
 """
-Uses the grid type from smolyak.jl to construct an interpolation type
+Uses the grid type from smolyak_grid.jl to construct an interpolation type
 """
 require("smolyak.jl")
 
@@ -19,7 +19,7 @@ type SmolyakInterp
 end
 
 
-function find_theta{T :< Number}(sg::SmolyakGrd, f_on_grid::Matrix{T})
+function find_theta{T <: Number}(sg::SmolyakGrid, f_on_grid::Vector{T})
     # Use pre-computed LU decomp to get coefficients
    return sg.B_U \ (sg.B_L \ f_on_grid)
 end
@@ -38,4 +38,10 @@ end
 # Convenience method to update coefficients.
 function update_theta{T :< Number}(si::SmolyakInterp, f_on_grid::Matrix{T})
     si.theta = find_theta(si, f_on_grid)
+end
+
+
+# Interpolation
+function interpolate(si::SmolyakInterp, pts::Array{Float64})
+    return
 end
