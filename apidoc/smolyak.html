@@ -1,0 +1,346 @@
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>smolyak Package &mdash; Smolyak 0.0.1 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:'../',
+        VERSION:'0.0.1',
+        COLLAPSE_INDEX:false,
+        FILE_SUFFIX:'.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+    <link rel="top" title="Smolyak 0.0.1 documentation" href="../index.html"/>
+        <link rel="up" title="smolyak" href="modules.html"/>
+        <link rel="prev" title="smolyak" href="modules.html"/> 
+
+  <script src="//cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="../index.html" class="icon icon-home"> Smolyak</a>
+        <form class="wy-form" action="../search.html" method="get">
+  <input type="text" name="q" placeholder="Search docs" />
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix">
+        
+        
+            <ul class="simple">
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">smolyak</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="">smolyak Package</a></li>
+</ul>
+</li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top">
+        <i data-toggle="wy-nav-top" class="icon icon-reorder"></i>
+        <a href="/">Smolyak</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <ul class="wy-breadcrumbs">
+  <li><a href="../index.html">Docs</a> &raquo;</li>
+  <li><a href="">smolyak Package</a></li>
+  
+</ul>
+<hr/>
+
+          
+  <div class="section" id="smolyak-package">
+<h1>smolyak Package<a class="headerlink" href="#smolyak-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-smolyak.grid">
+<span id="grid-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">grid</span></tt> Module<a class="headerlink" href="#module-smolyak.grid" title="Permalink to this headline">¶</a></h2>
+<p>This file contains a class that builds a Smolyak Grid.  The hope is that
+it will eventually contain the interpolation routines necessary so that
+the given some data, this class can build a grid and use the Chebyshev
+polynomials to interpolate and approximate the data.</p>
+<p>Method based on Judd, Maliar, Maliar, Valero 2013 (W.P)</p>
+<p>Authors: Chase Coleman and Spencer Lyon</p>
+<dl class="class">
+<dt id="smolyak.grid.SmolyakGrid">
+<em class="property">class </em><tt class="descclassname">smolyak.grid.</tt><tt class="descname">SmolyakGrid</tt><big>(</big><em>d</em>, <em>mu</em>, <em>do='all'</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#SmolyakGrid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.SmolyakGrid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>This class currently takes a dimension and a degree of polynomial
+and builds the Smolyak Sparse grid.  We base this on the work by
+Judd Maliar Maliar and Valero.  Hope to obtain speed ups beyond
+what they achieved.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>d</strong> : scalar</p>
+<blockquote>
+<div><p>This is the dimension of grid that you are building</p>
+</div></blockquote>
+<p><strong>mu</strong> : scalar</p>
+<blockquote>
+<div><p>mu is a parameter that defines the fineness of grid that we
+want to build</p>
+</div></blockquote>
+<p><strong>do</strong> : str, optional(default=&#8217;all&#8217;)</p>
+<blockquote class="last">
+<div><p>do specifies whether you just want to build the grid or
+whether it should build the whole object.  Only takes values
+of &#8220;all&#8221; or &#8220;grid&#8221;.  Default is &#8220;all&#8221;</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<p>s = SmolyakGrid(3, 2)</p>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="5%" />
+<col width="13%" />
+<col width="82%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>d</td>
+<td>scalar</td>
+<td>This is the dimension of grid that you are building</td>
+</tr>
+<tr class="row-even"><td>mu</td>
+<td>scalar</td>
+<td>mu is a parameter that defines the fineness of grid that we
+want to build</td>
+</tr>
+<tr class="row-odd"><td>grid</td>
+<td>np.ndarray</td>
+<td>This is the sparse grid that we need to build</td>
+</tr>
+<tr class="row-even"><td>inds</td>
+<td>list</td>
+<td>This is a lists of lists that contains all of the indices</td>
+</tr>
+<tr class="row-odd"><td>B</td>
+<td>np.ndarray</td>
+<td>This is the B matrix that is used to do lagrange interpolation</td>
+</tr>
+<tr class="row-even"><td>B_L</td>
+<td>np.ndarray</td>
+<td>Lower triangle matrix of the decomposition of B</td>
+</tr>
+<tr class="row-odd"><td>B_U</td>
+<td>np.ndarray</td>
+<td>Upper triangle matrix of the decomposition of B</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#smolyak.grid.SmolyakGrid.plot_grid" title="smolyak.grid.SmolyakGrid.plot_grid"><tt class="xref py py-obj docutils literal"><span class="pre">plot_grid</span></tt></a>()</td>
+<td>This is a simple function that beautifully plots the grid for</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="smolyak.grid.SmolyakGrid.plot_grid">
+<tt class="descname">plot_grid</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#SmolyakGrid.plot_grid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.SmolyakGrid.plot_grid" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a simple function that beautifully plots the grid for
+the 2 and 3d cases</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="smolyak.grid.a_chain">
+<tt class="descclassname">smolyak.grid.</tt><tt class="descname">a_chain</tt><big>(</big><em>n</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#a_chain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.a_chain" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method finds all of the unidimensional disjoint sets
+that we will use to construct the grid.  It improves on
+past algorithms by noting that A_{n} = S_{n}[evens] except for
+A_1 = {0} and A_2 = {-1, 1}. Additionally, A_{n} = A_{n+1}[odds]
+This prevents the calculation of these nodes repeatedly.  Thus
+we only need to calculate biggest of the S_n&#8217;s to build the
+sequence of A_n&#8217;s</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>n</strong> : scalar</p>
+<blockquote>
+<div><p>This is the number of disjoint sets from Sn that this should make</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>A_chain</strong> : dictionary</p>
+<blockquote class="last">
+<div><p>This is a dictionary of the disjoint sets that are made.  They are
+indexed by the integer corresponding</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="smolyak.grid.build_B">
+<tt class="descclassname">smolyak.grid.</tt><tt class="descname">build_B</tt><big>(</big><em>d</em>, <em>mu</em>, <em>grid</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#build_B"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.build_B" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function builds the matrix B that will be used to calc
+the interpolation coefficients for a given set of data.</p>
+<p class="rubric">Notes</p>
+<p>This method sets the attributes B, B_L, B_U</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="smolyak.grid.build_grid">
+<tt class="descclassname">smolyak.grid.</tt><tt class="descname">build_grid</tt><big>(</big><em>d</em>, <em>mu</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#build_grid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.build_grid" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method builds a grid for the object</p>
+<p class="rubric">Notes</p>
+<p>This method sets the attribute grid</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="smolyak.grid.cheby2n">
+<tt class="descclassname">smolyak.grid.</tt><tt class="descname">cheby2n</tt><big>(</big><em>x</em>, <em>n</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#cheby2n"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.cheby2n" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="smolyak.grid.cheby_eval">
+<tt class="descclassname">smolyak.grid.</tt><tt class="descname">cheby_eval</tt><big>(</big><em>x</em>, <em>n</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#cheby_eval"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.cheby_eval" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="smolyak.grid.m_i">
+<tt class="descclassname">smolyak.grid.</tt><tt class="descname">m_i</tt><big>(</big><em>i</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#m_i"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.m_i" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="smolyak.grid.num_grid_points">
+<tt class="descclassname">smolyak.grid.</tt><tt class="descname">num_grid_points</tt><big>(</big><em>d</em>, <em>mu</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#num_grid_points"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.num_grid_points" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="smolyak.grid.phi_chain">
+<tt class="descclassname">smolyak.grid.</tt><tt class="descname">phi_chain</tt><big>(</big><em>n</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#phi_chain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.phi_chain" title="Permalink to this definition">¶</a></dt>
+<dd><p>Finds the disjoint sets of aphi&#8217;s that will be used to compute
+which functions we need to calculate</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="smolyak.grid.poly_inds">
+<tt class="descclassname">smolyak.grid.</tt><tt class="descname">poly_inds</tt><big>(</big><em>d</em>, <em>mu</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#poly_inds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.poly_inds" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function builds the indices of the basis polynomials that
+will be used to interpolate.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="smolyak.grid.smol_inds">
+<tt class="descclassname">smolyak.grid.</tt><tt class="descname">smol_inds</tt><big>(</big><em>d</em>, <em>mu</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#smol_inds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.smol_inds" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method finds all of the indices that satisfy the requirement
+that d leq sum_{i=1}^d leq d + mu.  Once we have these, then
+they can be used to build both the grid and the polynomial
+basis.</p>
+<p class="rubric">Notes</p>
+<p>This method sets the attribute smol_inds</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-smolyak.util">
+<span id="util-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">util</span></tt> Module<a class="headerlink" href="#module-smolyak.util" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="smolyak.util.permute">
+<tt class="descclassname">smolyak.util.</tt><tt class="descname">permute</tt><big>(</big><em>a</em><big>)</big><a class="reference internal" href="../_modules/smolyak/util.html#permute"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.util.permute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates all unique combinations of a list a that is passed in.
+Function is based off of a function written by John Lettman:
+TCHS Computer Information Systems.  My thanks to him.</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          <footer>
+  
+    <div class="rst-footer-buttons">
+      
+      
+        <a href="modules.html" class="btn btn-neutral" title="smolyak"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <p>
+      &copy; Copyright 2013, EconForge.
+  </p>
+
+  <a href="https://www.github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="http://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+</body>
+</html>
