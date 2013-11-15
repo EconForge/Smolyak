@@ -46,7 +46,7 @@ GH_PAGES_SOURCES = scipy-sphinx-theme source sphinxext Makefile ../smolyak
 
 gh-pages:
 	git checkout gh-pages
-	rm -rf build _sources _static _modules
+	rm -rf ../build ../_sources ../_static ../_modules ../apidoc
 	git checkout master $(GH_PAGES_SOURCES)
 	git reset HEAD
 	make html
