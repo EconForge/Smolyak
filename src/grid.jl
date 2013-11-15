@@ -13,7 +13,7 @@ Author: Chase Coleman and Spencer Lyon
 
 using Iterators
 using Cartesian
-# import PyPlot
+import PyPlot
 require("util")
 import Base.show
 
@@ -192,7 +192,7 @@ function smol_inds(d::Int, mu::Int)
     that d \leq \sum_{i=1}^d \leq d + \mu.
 
     Parameters
-    ==========
+    ----------
     d : int
         The number of dimensions in the grid
 
@@ -200,13 +200,13 @@ function smol_inds(d::Int, mu::Int)
         The parameter mu defining the density of the grid
 
     Returns
-    =======
+    -------
     true_inds : Array
         A 1-d Any array containing all d element arrays satisfying the
         constraint
 
     Notes
-    =====
+    -----
     This function is used directly by build_grid and poly_inds
 
     """
@@ -241,7 +241,7 @@ function poly_inds(d::Int, mu::Int)
     polynomials needed to build smolyak polynomial
 
     Parameters
-    ==========
+    ----------
     d : Int
         The number of dimensions in grid / polynomial
 
@@ -249,13 +249,13 @@ function poly_inds(d::Int, mu::Int)
         The parameter mu defining the density of the grid
 
     Returns
-    =======
+    -------
     phi_inds : Array{Int, 2}
         A two dimensional array of integers where each row specifies a
         new set of indices needed to define a smolyak basis polynomial
 
     Notes
-    =====
+    -----
     This function uses smol_inds and phi_chain. The output of this
     function is used by build_B to construct the B matrix
 
@@ -291,7 +291,7 @@ function build_B(d::Int, mu::Int, grid::Array{Float64, 2})
     Translation of dolo.numeric.interpolation.smolyak.SmolyakBasic
 
     Parameters
-    ==========
+    ----------
     d : Int
         The number of dimensions on the grid
 
@@ -302,7 +302,7 @@ function build_B(d::Int, mu::Int, grid::Array{Float64, 2})
         The smolyak grid returned by calling `build_grid(d, mu)`
 
     Returns
-    =======
+    -------
     B : Array{Float64, 2}
         The matrix B that represents the Smolyak polynomial
         corresponding to grid
@@ -321,7 +321,6 @@ end
 
 
 ### type SmolyakGrid
-
 type SmolyakGrid
     d::Int  # number of dimensions
     mu::Int  # density parameter
@@ -409,20 +408,93 @@ function smol_inds(d::Int, mu::Array{Int, 1})
 end
 
 
-# function plot(sg::SmolyakGrid)
-#     g = sg.grid
-#     if size(g, 2) == 2
-#         PyPlot.plot(g[:, 1], g[:, 2], "b.")
-#         PyPlot.xlim((-1.5, 1.5))
-#         PyPlot.ylim((-1.5, 1.5))
-#         PyPlot.title("Smolyak grid: \$d=$(sg.d), \\; \\mu=$(sg.mu)\$")
-#     elseif size(g, 2) == 3
-#         PyPlot.scatter3D(g[:, 1], g[:, 2], g[:, 3], "b.")
-#         PyPlot.title("Smolyak grid: \$d=$(sg.d), \\; \\mu=$(sg.mu)\$")
-#     else
-#         error("ERROR: can only plot 2d or 3d grids")
-#     end
-# end
+# Build grid
+function build_grid(d::Int, mu::Array{Int, 1})
+    """
+    Use disjoint Smolyak sets to construct Smolyak grid of degree d and
+    density parameter mu
+
+    The return value is an n x d Array, where n is the number of points
+    in the grid
+
+    """
+
+    true_inds = smol_inds(d, mu)
+    An = a_chain(maximum(mu) + 1)
+    return vcat([ cartprod([An[i] for i in el]) for el in true_inds]...)
+end
+
+
+### type ASmolyakGrid (Anisotropic Smolyak grid)
+type ASmolyakGrid
+    d::Int  # number of dimensions
+    mu::Array{Int, 1}  # density parameter. Array One for per dimension
+    grid::Matrix{Float64}  # Smolyak grid
+    inds::Array{Any, 1}  # Smolyak indices
+    B::Matrix{Float64}  # matrix representing interpoland
+    B_L::Matrix{Float64}  # L from LU decomposition of B
+    B_U::Matrix{Float64}  # U from LU decomposition of B
+
+    function ASmolyakGrid(d::Int, mu::Array{Int, 1})
+        if d < 2
+            error("You passed d = $d. d must be greater than 1")
+        end
+        if any(mu .< 1)
+            error("You passed mu = $mu. each element must be greater than 1")
+        end
+
+        if length(mu) != d
+            error("mu must have d elements. It has $(length(mu))")
+        end
+
+        grid = build_grid(d, mu)
+        inds = smol_inds(d, mu)
+        B = build_B(d, maximum(mu), grid)
+        lu_B = lu(B)
+        B_L = lu_B[1]
+        B_U = lu_B[2]
+
+        new(d, mu, grid, inds, B, B_L, B_U)
+    end
+
+    # Default constructor, just in case someone gets brave
+    function ASmolyakGrid(d, mu, grid, inds, B, B_L, B_U)
+        new(d, mu, grid, inds, B, B_L, B_U)
+    end
+end
+
+
+function show(io::IO, sg::ASmolyakGrid)
+    "show method for ASmolyakGrid type"
+    npoints = size(sg.grid, 1)
+    non_zero_pts = nnz(sg.B)
+    pct_non_zero = non_zero_pts / (npoints ^ 2)
+    mu_str = replace(strip(string(ag.mu)), '\n', ", ")
+    msg = "Anisotropic Smolyak Grid:\n"
+    msg *= "\td: $(sg.d)\n\tmu: $(mu_str)\n\tnpoints: $npoints"
+    msg *= @sprintf "\n\tB: %.2f%% non-zero" pct_non_zero
+    print(io, msg)
+end
+
+
+## ---------------- ##
+#- Utilty funcitons -#
+## ---------------- ##
+
+function plot(sg::Union(SmolyakGrid, ASmolyakGrid))
+    g = sg.grid
+    if size(g, 2) == 2
+        PyPlot.plot(g[:, 1], g[:, 2], "b.")
+        PyPlot.xlim((-1.5, 1.5))
+        PyPlot.ylim((-1.5, 1.5))
+        PyPlot.title("Smolyak grid: \$d=$(sg.d), \\; \\mu=$(sg.mu)\$")
+    elseif size(g, 2) == 3
+        PyPlot.scatter3D(g[:, 1], g[:, 2], g[:, 3], "b.")
+        PyPlot.title("Smolyak grid: \$d=$(sg.d), \\; \\mu=$(sg.mu)\$")
+    else
+        error("ERROR: can only plot 2d or 3d grids")
+    end
+end
 
 #----------
 # Test case from dolo
