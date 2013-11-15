@@ -11,7 +11,13 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   apidoc/smolyak
+
+Generated documentation:
+
+.. toctree::
+   :maxdepth: 2
+
+   apidoc/modules
 
 
 Indices and tables
