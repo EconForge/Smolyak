@@ -40,6 +40,9 @@
 *.pyw
 *.so
 .ipynb_checkpoints/
+dist/
+
+*.egg*
 
 ## Cython ignores
 build/
