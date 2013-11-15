@@ -12,6 +12,7 @@
 # serve to show the default.
 
 import sys, os
+import sphinx_rtd_theme
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -40,19 +41,15 @@ sys.path.extend([
 extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.doctest',
               'sphinx.ext.extlinks',
-              'sphinx.ext.todo',
+              'sphinx.ext.viewcode',
+              'sphinx.ext.intersphinx',
+              'sphinx.ext.mathjax',
+              'sphinx.ext.autosummary',
               'numpydoc',
               'ipython_directive',
               'ipython_console_highlighting',
-              'sphinx.ext.intersphinx',
-              'sphinx.ext.todo',
-              'sphinx.ext.coverage',
-              'sphinx.ext.mathjax',
-              'sphinx.ext.ifconfig',
-              'sphinx.ext.autosummary',
               'matplotlib.sphinxext.only_directives',
               'matplotlib.sphinxext.plot_directive',
-              'sphinx.ext.viewcode',
               ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -109,26 +106,24 @@ exclude_patterns = []
 #show_authors = False
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'tango'
+pygments_style = 'tomorrownight'
 
 # A list of ignored prefixes for module index sorting.
 #modindex_common_prefix = []
 
 
 # -- Options for HTML output ---------------------------------------------------
-themedir = os.path.join(os.pardir, 'scipy-sphinx-theme', '_theme')
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-html_theme = 'scipy'
-html_theme_path = [themedir]
+html_theme = "sphinx_rtd_theme"
+
+html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {
-                      "edit_link" : False,
-                      "sidebar" : 'left'
-}
+# html_theme_options = {
+#                       "edit_link" : False,
+#                       "sidebar" : 'left'
+# }
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
