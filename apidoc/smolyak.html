@@ -121,8 +121,9 @@ polynomials to interpolate and approximate the data.</p>
 <li>Chase Coleman (<a class="reference external" href="mailto:ccoleman&#37;&#52;&#48;stern&#46;nyu&#46;edu">ccoleman<span>&#64;</span>stern<span>&#46;</span>nyu<span>&#46;</span>edu</a>)</li>
 <li>Spencer Lyon (<a class="reference external" href="mailto:slyon&#37;&#52;&#48;stern&#46;nyu&#46;edu">slyon<span>&#64;</span>stern<span>&#46;</span>nyu<span>&#46;</span>edu</a>)</li>
 </ul>
+</div>
 <div class="section" id="references">
-<h4>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h4>
+<h3>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h3>
 <dl class="docutils">
 <dt>Judd, Kenneth L, Lilia Maliar, Serguei Maliar, and Rafael Valero. 2013.</dt>
 <dd>&#8220;Smolyak Method for Solving Dynamic Economic Models: Lagrange
@@ -144,12 +145,11 @@ Judd, Maliar, Maliar, and Valero (2013).</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>d</strong> : int</p>
 <blockquote>
-<div><p>This is the dimension of grid that you are building</p>
+<div><p>The number of dimensions in the grid</p>
 </div></blockquote>
-<p><strong>mu</strong> : int</p>
+<p><strong>mu</strong> : int or array(int, ndim=1, length=d)</p>
 <blockquote class="last">
-<div><p>mu is a parameter that defines the fineness of grid that we
-want to build</p>
+<div><p>The &#8220;density&#8221; parameter for the grid</p>
 </div></blockquote>
 </td>
 </tr>
@@ -162,6 +162,14 @@ want to build</p>
 <span class="go">    d: 3</span>
 <span class="go">    mu: 2</span>
 <span class="go">    npoints: 25</span>
+<span class="go">    B: 0.65% non-zero</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ag</span> <span class="o">=</span> <span class="n">SmolyakGrid</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ag</span>
+<span class="go">Anisotropic Smolyak Grid:</span>
+<span class="go">    d: 3</span>
+<span class="go">    mu: 1 x 2 x 3</span>
+<span class="go">    npoints: 51</span>
+<span class="go">    B: 0.68% non-zero</span>
 </pre></div>
 </div>
 <p class="rubric">Attributes</p>
@@ -266,7 +274,7 @@ indexed by the integer corresponding</p>
 
 <dl class="function">
 <dt id="smolyak.grid.build_B">
-<tt class="descclassname">smolyak.grid.</tt><tt class="descname">build_B</tt><big>(</big><em>d</em>, <em>mu</em>, <em>grid</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#build_B"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.build_B" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">smolyak.grid.</tt><tt class="descname">build_B</tt><big>(</big><em>d</em>, <em>mu</em>, <em>grid</em>, <em>inds=None</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#build_B"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.build_B" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute the matrix B from equation 22 in JMMV 2013
 Translation of dolo.numeric.interpolation.smolyak.SmolyakBasic</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -277,13 +285,19 @@ Translation of dolo.numeric.interpolation.smolyak.SmolyakBasic</p>
 <blockquote>
 <div><p>The number of dimensions on the grid</p>
 </div></blockquote>
-<p><strong>mu</strong> : int</p>
+<p><strong>mu</strong> : int or array (int, ndim=1, legnth=d)</p>
 <blockquote>
 <div><p>The mu parameter used to define grid</p>
 </div></blockquote>
 <p><strong>grid</strong> : array (float, dims=2)</p>
 <blockquote>
 <div><p>The smolyak grid returned by calling <cite>build_grid(d, mu)</cite></p>
+</div></blockquote>
+<p><strong>inds</strong> : list (list (int)), optional (default=None)</p>
+<blockquote>
+<div><p>The Smolyak indices for parameters d and mu. Should be computed
+by calling <cite>smol_inds(d, mu)</cite>. If None is given, the indices
+are computed using this function call</p>
 </div></blockquote>
 </td>
 </tr>
@@ -300,7 +314,7 @@ corresponding to grid</p>
 
 <dl class="function">
 <dt id="smolyak.grid.build_grid">
-<tt class="descclassname">smolyak.grid.</tt><tt class="descname">build_grid</tt><big>(</big><em>d</em>, <em>mu</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#build_grid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.build_grid" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">smolyak.grid.</tt><tt class="descname">build_grid</tt><big>(</big><em>d</em>, <em>mu</em>, <em>inds=None</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#build_grid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.build_grid" title="Permalink to this definition">¶</a></dt>
 <dd><p>Use disjoint Smolyak sets to construct Smolyak grid of degree d and
 density parameter <span class="math">\(mu\)</span></p>
 <p>The return value is an <span class="math">\(n \times d\)</span> Array, where <span class="math">\(n\)</span>
@@ -316,6 +330,12 @@ is the number of points in the grid</p>
 <p><strong>mu</strong> : int</p>
 <blockquote>
 <div><p>The density parameter for the grid</p>
+</div></blockquote>
+<p><strong>inds</strong> : list (list (int)), optional (default=None)</p>
+<blockquote>
+<div><p>The Smolyak indices for parameters d and mu. Should be computed
+by calling <cite>smol_inds(d, mu)</cite>. If None is given, the indices
+are computed using this function call</p>
 </div></blockquote>
 </td>
 </tr>
@@ -457,7 +477,7 @@ that Smolyak index</p>
 
 <dl class="function">
 <dt id="smolyak.grid.poly_inds">
-<tt class="descclassname">smolyak.grid.</tt><tt class="descname">poly_inds</tt><big>(</big><em>d</em>, <em>mu</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#poly_inds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.poly_inds" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">smolyak.grid.</tt><tt class="descname">poly_inds</tt><big>(</big><em>d</em>, <em>mu</em>, <em>inds=None</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#poly_inds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.poly_inds" title="Permalink to this definition">¶</a></dt>
 <dd><p>Build indices specifying all the Cartesian products of Chebychev
 polynomials needed to build Smolyak polynomial</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -471,6 +491,12 @@ polynomials needed to build Smolyak polynomial</p>
 <p><strong>mu</strong> : int</p>
 <blockquote>
 <div><p>The parameter mu defining the density of the grid</p>
+</div></blockquote>
+<p><strong>inds</strong> : list (list (int)), optional (default=None)</p>
+<blockquote>
+<div><p>The Smolyak indices for parameters d and mu. Should be computed
+by calling <cite>smol_inds(d, mu)</cite>. If None is given, the indices
+are computed using this function call</p>
 </div></blockquote>
 </td>
 </tr>
@@ -490,7 +516,7 @@ function is used by build_B to construct the B matrix</p>
 
 <dl class="function">
 <dt id="smolyak.grid.s_n">
-<tt class="descclassname">smolyak.grid.</tt><tt class="descname">s_n</tt><big>(</big><em>n</em><big>)</big><a class="headerlink" href="#smolyak.grid.s_n" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">smolyak.grid.</tt><tt class="descname">s_n</tt><big>(</big><em>n</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#s_n"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.s_n" title="Permalink to this definition">¶</a></dt>
 <dd><p>Finds the set <span class="math">\(S_n\)</span> , which is the <span class="math">\(n\)</span> th Smolyak set of
 Chebychev extrema</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -547,7 +573,6 @@ constraint</p>
 <p>This function is used directly by build_grid and poly_inds</p>
 </dd></dl>
 
-</div>
 </div>
 </div>
 <div class="section" id="module-smolyak.util">
