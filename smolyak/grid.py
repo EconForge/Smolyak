@@ -69,17 +69,17 @@ def num_grid_points(d, mu):
 
 
 def m_i(i):
-    """
+    r"""
     Compute one plus the "total degree of the interpolating
     polynoimals" (Kruger & Kubler, 2004). This shows up many times in
     Smolyak's algorithm. It is defined as:
 
     .. math::
 
-        m_i = \\begin\{cases\}
-        1 \\quad & \\text\{if \} i = 1 \\\\
-        2^\{i-1\} + 1 \\quad & \\text\{if \} i \\geq 2
-        \\end\{cases\}
+        m_i = \begin{cases}
+        1 \quad & \text{if } i = 1 \\
+        2^{i-1} + 1 \quad & \text{if } i \geq 2
+        \end{cases}
 
     Parameters
     ----------
