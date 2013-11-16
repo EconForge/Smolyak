@@ -25,11 +25,11 @@ def a_chain(n):
     """
     This method finds all of the unidimensional disjoint sets
     that we will use to construct the grid.  It improves on
-    past algorithms by noting that :math:`A_{n} = S_{n}` [evens] except for
-    :math:`A_1 = \{0\}` and :math:`A_2 = \{-1, 1\}` . Additionally,
-    :math:`A_{n} = A_{n+1}` [odds] This prevents the calculation of these
-    nodes repeatedly.  Thus we only need to calculate biggest of the S_n's to
-    build the sequence of :math:`A_n` 's
+    past algorithms by noting that :math:`A_{n} = S_{n}` [evens] except
+    for :math:`A_1 = \{0\}` and :math:`A_2 = \{-1, 1\}` . Additionally,
+    :math:`A_{n} = A_{n+1}` [odds] This prevents the calculation of
+    these nodes repeatedly.  Thus we only need to calculate biggest of
+    the S_n's to build the sequence of :math:`A_n` 's
 
     Parameters
     ----------
@@ -41,10 +41,11 @@ def a_chain(n):
     A_chain : dict (int -> list)
       This is a dictionary of the disjoint sets that are made.  They are
       indexed by the integer corresponding
+
     """
 
     # # Start w finding the biggest Sn(We will subsequently reduce it)
-    Sn = _s_n(n)
+    Sn = S_n(n)
 
     A_chain = {}
     A_chain[1] = [0.]
@@ -60,9 +61,23 @@ def a_chain(n):
 
     return A_chain
 
-def _s_n(n):
+
+def S_n(n):
     """
-    This method finds the element S_n for the Chebyshev Extrema
+    Finds the set :math:`S_n` , which is the :math:`n` th Smolyak set of
+    Chebyshev extrema
+
+    Parameters
+    ----------
+    n : int
+        The index :math:`n` specifying which Smolyak set to compute
+
+    Returns
+    -------
+    s_n : array (float, ndim=1)
+        An array containing all the Chebychev extrema in the set
+        :math:`S_n`
+
     """
 
     if n == 1:
@@ -80,6 +95,7 @@ def _s_n(n):
     vals[np.where(np.abs(vals) < 1e-14)] = 0.0
 
     return vals
+
 
 def smol_inds(d, mu):
     """
@@ -106,7 +122,7 @@ def smol_inds(d, mu):
     This function is used directly by build_grid and poly_inds
 
     """
-    if type(mu)==int:
+    if isinstance(mu, int):
         max_mu = mu
     else:
         if mu.size != d:
@@ -119,12 +135,13 @@ def smol_inds(d, mu):
     # find all (i1, i2, ... id) such that their sum is in range
     # we want; this will cut down on later iterations
     poss_inds = [el for el in combinations_with_replacement(possible_values, d)
-                  if d < sum(el) <= d+max_mu]
+                 if d < sum(el) <= d+max_mu]
 
-    if type(mu)==int:
+    if isinstance(mu, int):
         true_inds = [[el for el in permute(list(val))] for val in poss_inds]
     else:
-        true_inds = [[el for el in permute(list(val)) if all(el <= mu+1)] for val in poss_inds]
+        true_inds = [[el for el in permute(list(val)) if all(el <= mu+1)]
+                     for val in poss_inds]
 
     # Add the d dimension 1 array so that we don't repeat it a bunch
     # of times
@@ -134,9 +151,27 @@ def smol_inds(d, mu):
 
     return tinds
 
+
 def build_grid(d, mu):
     """
-    This method builds a grid for the object
+    Use disjoint Smolyak sets to construct Smolyak grid of degree d and
+    density parameter :math:`mu`
+
+    The return value is an :math:`n \\times d` Array, where :math:`n`
+    is the number of points in the grid
+
+    Parameters
+    ----------
+    d : int
+        The number of dimensions in the grid
+
+    mu : int
+        The density parameter for the grid
+
+    Returns
+    -------
+    grid : array (float, ndim=2)
+        The Smolyak grid for the given d, :math:`mu`
 
     """
     # Get An chain
@@ -159,10 +194,12 @@ def build_grid(d, mu):
 
     return grid, tinds
 
+
 def phi_chain(n):
     """
     For each number in 1 to n, compute the Smolyak indices for the
-    corresponding basis functions. This is the :math:`n` in :math:`\\phi_n`
+    corresponding basis functions. This is the :math:`n` in
+    :math:`\\phi_n`
 
     Parameters
     ----------
@@ -173,9 +210,9 @@ def phi_chain(n):
     Returns
     -------
     aphi_chain : dict (int -> list)
-        A dictionary whose keys are the Smolyak index :math:`n` and values are
-        lists containing all basis polynomial subscripts for that Smolyak
-        index
+        A dictionary whose keys are the Smolyak index :math:`n` and
+        values are lists containing all basis polynomial subscripts for
+        that Smolyak index
 
     """
 
@@ -194,6 +231,7 @@ def phi_chain(n):
 
     return aphi_chain
 
+
 def poly_inds(d, mu):
     """
     Build indices specifying all the Cartesian products of Chebychev
@@ -209,9 +247,9 @@ def poly_inds(d, mu):
 
     Returns
     -------
-    phi_inds : Array{Int, 2}
+    phi_inds : array : (int, ndim=2)
         A two dimensional array of integers where each row specifies a
-        new set of indices needed to define a smolyak basis polynomial
+        new set of indices needed to define a Smolyak basis polynomial
 
     Notes
     -----
@@ -221,9 +259,6 @@ def poly_inds(d, mu):
     """
     inds = smol_inds(d, mu)
     aphi = phi_chain(mu + 1)
-
-    # Bring in polynomials
-    # cheb_dict = self.calc_chebvals()
 
     base_polys = []
 
@@ -235,6 +270,7 @@ def poly_inds(d, mu):
         base_polys.extend(list(product(*temp)))
 
     return base_polys
+
 
 def build_B(d, mu, grid):
     """
@@ -269,31 +305,40 @@ def build_B(d, mu, grid):
 
     return B
 
-def cheby_eval(x, n):
-    past_val = np.ones_like(x)
-    curr_val = x
-
-    if n == 1:
-        return past_val
-
-    if n == 2:
-        return curr_val
-
-    for i in xrange(3, n + 1):
-        temp = 2*x*curr_val - past_val
-        past_val = curr_val
-        curr_val = temp
-
-    return curr_val
 
 def cheby2n(x, n):
-    # computes the chebychev polynomials of the first kind
+    """
+    Computes the first :math:`n+1` Chebychev polynomials of the first
+    kind evaluated at each point in :math:`x` .
+
+    Parameters
+    ----------
+    x : float or array(float)
+        A single point (float) or an array of points where each
+        polynomial should be evaluated
+
+    n : int
+        The integer specifying which Chebychev polynomial is the last
+        to be computed
+
+    Returns
+    -------
+    results : array (float, ndim=x.ndim+1)
+        The results of computation. This will be an
+        :math:`n+1 \\times dim \\dots` where :math:`dim \\dots` is the
+        shape of x. Each slice along the first dimension represents a
+        new Chebychev polynomial. This dimension has length :math:`n+1`
+        because it includes :math:`\\phi_0` which is equal to 1
+        :math:`\\forall x`
+
+    """
+    x = np.asarray(x)
     dim = x.shape
-    results = np.zeros((n+1, ) + dim)
+    results = np.zeros((n + 1, ) + dim)
     results[0, ...] = np.ones(dim)
     results[1, ...] = x
-    for i in range(2,n+1):
-        results[i,...] = 2 * x * results[i-1,...] - results[i-2,...]
+    for i in range(2, n+1):
+        results[i, ...] = 2 * x * results[i-1, ...] - results[i-2, ...]
     return results
 
 
@@ -306,6 +351,7 @@ def num_grid_points(d, mu):
 
     if mu == 3:
         return 1 + 8*d + 12*d*(d-1)/2. + 8*d*(d-1)*(d-2)/6.
+
 
 def m_i(i):
     if i < 0:
@@ -369,7 +415,6 @@ class SmolyakGrid(object):
         npoints: 25
 
     """
-
     def __init__(self, d, mu):
         self.d = d
         self.mu = mu
@@ -388,8 +433,6 @@ class SmolyakGrid(object):
         l, u = lu(self.B, True)  # pass permute_l as true. See scipy docs
         self.B_L = l
         self.B_U = u
-
-
 
     def __repr__(self):
         msg = "Smolyak Grid:\n\td: {0} \n\tmu: {1} \n\tnpoints: {2}"

@@ -319,10 +319,23 @@ end
 function build_grid(d::Int, mu::Union(Int, Vector{Int}))
     """
     Use disjoint Smolyak sets to construct Smolyak grid of degree d and
-    density parameter mu
+    density parameter :math:`mu`
 
-    The return value is an n x d Array, where n is the number of points
-    in the grid
+    The return value is an :math:`n \\times d` Array, where :math:`n` is the
+    number of points in the grid
+
+    Parameters
+    ----------
+    d : int
+        The number of dimensions in the grid
+
+    mu : int
+        The density parameter for the grid
+
+    Returns
+    -------
+    grid : array (float, ndim=2)
+        The Smolyak grid for the given d, :math:`mu`
 
     """
 
