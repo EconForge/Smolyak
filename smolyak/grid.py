@@ -515,6 +515,14 @@ class SmolyakGrid(object):
         d: 3
         mu: 2
         npoints: 25
+        B: 0.65% non-zero
+    >>> ag = SmolyakGrid(3, [1, 2, 3])
+    >>> ag
+    Anisotropic Smolyak Grid:
+        d: 3
+        mu: 1 x 2 x 3
+        npoints: 51
+        B: 0.68% non-zero
 
     """
     def __init__(self, d, mu):
