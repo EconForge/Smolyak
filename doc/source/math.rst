@@ -12,16 +12,16 @@ The standard construction of a Smolyak grid uses nested sets of points.  One typ
 
 .. math::
 
-    i=1 \text{ } : \text{ }S_1 \{ 0 \}
+    i=1 \text{ } : \text{ }S_1 = \{ 0 \}
 
-    i=2 \text{ } : \text{ }S_2 \{ -1, 0, 1 \}
+    i=2 \text{ } : \text{ }S_2 = \{ -1, 0, 1 \}
 
-    i=3 \text{ } : \text{ }S_3 \{ -1, -\frac{1}{\sqrt{2}}, 0, \frac{1}{\sqrt{2}}, 1 \}
+    i=3 \text{ } : \text{ }S_3 = \{ -1, -\frac{1}{\sqrt{2}}, 0, \frac{1}{\sqrt{2}}, 1 \}
 
-    i=4 \text{ } : \text{ }S_4 \{ -1, -\frac{\sqrt{2 + \sqrt{2}}}{2}, -\frac{1}{\sqrt{2}}, -\frac{\sqrt{2 - \sqrt{2}}}{2}, 0, \frac{\sqrt{2 - \sqrt{2}}}{2}, \frac{1}{\sqrt{2}}, \frac{\sqrt{2 + \sqrt{2}}}{2}, 1 \}
+    i=4 \text{ } : \text{ }S_4 = \{ -1, -\frac{\sqrt{2 + \sqrt{2}}}{2}, -\frac{1}{\sqrt{2}}, -\frac{\sqrt{2 - \sqrt{2}}}{2}, 0, \frac{\sqrt{2 - \sqrt{2}}}{2}, \frac{1}{\sqrt{2}}, \frac{\sqrt{2 + \sqrt{2}}}{2}, 1 \}
 
 
-One then takes the tensor product of the unidimensional sets and then picks out the products that satisfy :math:`d \leq \sum_{j=1}^d i_j \leq d + \mu` where :math:`i_j` is the index of the unidimensional sets.  For example if the parameters were :math:`d = 2, \mu = 2` then you would build the first four nested sets of points (as shown above) and then take all of the tensor products that satisfied :math:`2 \leq i_1 + i_2 \leq 4` which would give you :math:` S_1 \times S_1, S_1 \times S_2, S_2 \times S_1, S_2 \times S_2`.  Then these would be your points.  We will define the set of grid points to be :math:`\mathcal{H}^{d, \mu} := \cup_{d \leq |i^*| \leq d + \mu}  \prod{i=1}^{d+\mu} S_i` where :math:`i^* = \begin{bmatrix} i_1 & \dots i_d \end{bmatrix}`.
+One then takes the tensor product of the unidimensional sets and then picks out the products that satisfy :math:`d \leq \sum_{j=1}^d i_j \leq d + \mu` where :math:`i_j` is the index of the unidimensional sets.  For example if the parameters were :math:`d = 2, \mu = 2` then you would build the first four nested sets of points (as shown above) and then take all of the tensor products that satisfied :math:`2 \leq i_1 + i_2 \leq 4` which would give you :math:` S_1 \text{X} S_1, S_1 \text{X} S_2, S_2 \text{X} S_1, S_2 \text{X} S_2`.  Then these would be your points.  We will define the set of grid points to be :math:`\mathcal{H}^{d, \mu} := \bigcup_{d \leq |i^*| \leq d + \mu}  \prod{i=1}^{d+\mu} S_i` where :math:`i^* = \begin{bmatrix} i_1 & \dots i_d \end{bmatrix}`.
 
 You can see how there would be repeated points and hence this method could be improved upon.  This is one of the key results of the Judd, Maliar, Maliar, Valero (2013) paper.  Instead of building nested sets, they build disjoint sets :math:`A_i` such that :math:`A_1 = \{ 0 \}` and :math:`A_i = S_i \backslash S_{i-1}` for all :math:`i \geq 2`.  Then the points are taken from the tensor-products of these sets in the same fashion as described above.
 
