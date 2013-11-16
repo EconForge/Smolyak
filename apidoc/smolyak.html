@@ -118,7 +118,7 @@ polynomials to interpolate and approximate the data.</p>
 <p>Authors: Chase Coleman and Spencer Lyon</p>
 <dl class="class">
 <dt id="smolyak.grid.SmolyakGrid">
-<em class="property">class </em><tt class="descclassname">smolyak.grid.</tt><tt class="descname">SmolyakGrid</tt><big>(</big><em>d</em>, <em>mu</em>, <em>do='all'</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#SmolyakGrid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.SmolyakGrid" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">smolyak.grid.</tt><tt class="descname">SmolyakGrid</tt><big>(</big><em>d</em>, <em>mu</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#SmolyakGrid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.SmolyakGrid" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
 <p>This class currently takes a dimension and a degree of polynomial
 and builds the Smolyak Sparse grid.  We base this on the work by
@@ -133,28 +133,29 @@ what they achieved.</p>
 <div><p>This is the dimension of grid that you are building</p>
 </div></blockquote>
 <p><strong>mu</strong> : scalar</p>
-<blockquote>
+<blockquote class="last">
 <div><p>mu is a parameter that defines the fineness of grid that we
 want to build</p>
-</div></blockquote>
-<p><strong>do</strong> : str, optional(default=&#8217;all&#8217;)</p>
-<blockquote class="last">
-<div><p>do specifies whether you just want to build the grid or
-whether it should build the whole object.  Only takes values
-of &#8220;all&#8221; or &#8220;grid&#8221;.  Default is &#8220;all&#8221;</p>
 </div></blockquote>
 </td>
 </tr>
 </tbody>
 </table>
 <p class="rubric">Examples</p>
-<p>s = SmolyakGrid(3, 2)</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">SmolyakGrid</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span>
+<span class="go">Smolyak Grid:</span>
+<span class="go">    d: 3</span>
+<span class="go">    mu: 2</span>
+<span class="go">    npoints: 25</span>
+</pre></div>
+</div>
 <p class="rubric">Attributes</p>
 <table border="1" class="docutils">
 <colgroup>
 <col width="5%" />
-<col width="13%" />
-<col width="82%" />
+<col width="23%" />
+<col width="72%" />
 </colgroup>
 <tbody valign="top">
 <tr class="row-odd"><td>d</td>
@@ -167,7 +168,7 @@ of &#8220;all&#8221; or &#8220;grid&#8221;.  Default is &#8220;all&#8221;</p>
 want to build</td>
 </tr>
 <tr class="row-odd"><td>grid</td>
-<td>np.ndarray</td>
+<td>array, float, ndim=2</td>
 <td>This is the sparse grid that we need to build</td>
 </tr>
 <tr class="row-even"><td>inds</td>
@@ -214,11 +215,11 @@ the 2 and 3d cases</p>
 <tt class="descclassname">smolyak.grid.</tt><tt class="descname">a_chain</tt><big>(</big><em>n</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#a_chain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.a_chain" title="Permalink to this definition">¶</a></dt>
 <dd><p>This method finds all of the unidimensional disjoint sets
 that we will use to construct the grid.  It improves on
-past algorithms by noting that A_{n} = S_{n}[evens] except for
-A_1 = {0} and A_2 = {-1, 1}. Additionally, A_{n} = A_{n+1}[odds]
-This prevents the calculation of these nodes repeatedly.  Thus
-we only need to calculate biggest of the S_n&#8217;s to build the
-sequence of A_n&#8217;s</p>
+past algorithms by noting that <span class="math">\(A_{n} = S_{n}\)</span> [evens] except for
+<span class="math">\(A_1 = \{0\}\)</span> and <span class="math">\(A_2 = \{-1, 1\}\)</span> . Additionally,
+<span class="math">\(A_{n} = A_{n+1}\)</span> [odds] This prevents the calculation of these
+nodes repeatedly.  Thus we only need to calculate biggest of the S_n&#8217;s to
+build the sequence of <span class="math">\(A_n\)</span> &#8216;s</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -229,7 +230,7 @@ sequence of A_n&#8217;s</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>A_chain</strong> : dictionary</p>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>A_chain</strong> : dict (int -&gt; list)</p>
 <blockquote class="last">
 <div><p>This is a dictionary of the disjoint sets that are made.  They are
 indexed by the integer corresponding</p>
@@ -243,18 +244,41 @@ indexed by the integer corresponding</p>
 <dl class="function">
 <dt id="smolyak.grid.build_B">
 <tt class="descclassname">smolyak.grid.</tt><tt class="descname">build_B</tt><big>(</big><em>d</em>, <em>mu</em>, <em>grid</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#build_B"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.build_B" title="Permalink to this definition">¶</a></dt>
-<dd><p>This function builds the matrix B that will be used to calc
-the interpolation coefficients for a given set of data.</p>
-<p class="rubric">Notes</p>
-<p>This method sets the attributes B, B_L, B_U</p>
+<dd><p>Compute the matrix B from equation 22 in JMMV 2013
+Translation of dolo.numeric.interpolation.smolyak.SmolyakBasic</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>d</strong> : Int</p>
+<blockquote>
+<div><p>The number of dimensions on the grid</p>
+</div></blockquote>
+<p><strong>mu</strong> : Int</p>
+<blockquote>
+<div><p>The mu parameter used to define grid</p>
+</div></blockquote>
+<p><strong>grid</strong> : array</p>
+<blockquote>
+<div><p>The smolyak grid returned by calling <cite>build_grid(d, mu)</cite></p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>B</strong> : Array{Float64, 2}</p>
+<blockquote class="last">
+<div><p>The matrix B that represents the Smolyak polynomial
+corresponding to grid</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
 <dt id="smolyak.grid.build_grid">
 <tt class="descclassname">smolyak.grid.</tt><tt class="descname">build_grid</tt><big>(</big><em>d</em>, <em>mu</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#build_grid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.build_grid" title="Permalink to this definition">¶</a></dt>
 <dd><p>This method builds a grid for the object</p>
-<p class="rubric">Notes</p>
-<p>This method sets the attribute grid</p>
 </dd></dl>
 
 <dl class="function">
@@ -280,26 +304,95 @@ the interpolation coefficients for a given set of data.</p>
 <dl class="function">
 <dt id="smolyak.grid.phi_chain">
 <tt class="descclassname">smolyak.grid.</tt><tt class="descname">phi_chain</tt><big>(</big><em>n</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#phi_chain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.phi_chain" title="Permalink to this definition">¶</a></dt>
-<dd><p>Finds the disjoint sets of aphi&#8217;s that will be used to compute
-which functions we need to calculate</p>
+<dd><p>For each number in 1 to n, compute the Smolyak indices for the
+corresponding basis functions. This is the <span class="math">\(n\)</span> in <span class="math">\(\phi_n\)</span></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>n</strong> : int</p>
+<blockquote>
+<div><p>The last Smolyak index <span class="math">\(n\)</span> for which the basis polynomial
+indices should be found</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>aphi_chain</strong> : dict (int -&gt; list)</p>
+<blockquote class="last">
+<div><p>A dictionary whose keys are the Smolyak index <span class="math">\(n\)</span> and values are
+lists containing all basis polynomial subscripts for that Smolyak
+index</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
 <dt id="smolyak.grid.poly_inds">
 <tt class="descclassname">smolyak.grid.</tt><tt class="descname">poly_inds</tt><big>(</big><em>d</em>, <em>mu</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#poly_inds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.poly_inds" title="Permalink to this definition">¶</a></dt>
-<dd><p>This function builds the indices of the basis polynomials that
-will be used to interpolate.</p>
+<dd><p>Build indices specifying all the Cartesian products of Chebychev
+polynomials needed to build Smolyak polynomial</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>d</strong> : int</p>
+<blockquote>
+<div><p>The number of dimensions in grid / polynomial</p>
+</div></blockquote>
+<p><strong>mu</strong> : int</p>
+<blockquote>
+<div><p>The parameter mu defining the density of the grid</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>phi_inds</strong> : Array{Int, 2}</p>
+<blockquote class="last">
+<div><p>A two dimensional array of integers where each row specifies a
+new set of indices needed to define a smolyak basis polynomial</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>This function uses smol_inds and phi_chain. The output of this
+function is used by build_B to construct the B matrix</p>
 </dd></dl>
 
 <dl class="function">
 <dt id="smolyak.grid.smol_inds">
 <tt class="descclassname">smolyak.grid.</tt><tt class="descname">smol_inds</tt><big>(</big><em>d</em>, <em>mu</em><big>)</big><a class="reference internal" href="../_modules/smolyak/grid.html#smol_inds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smolyak.grid.smol_inds" title="Permalink to this definition">¶</a></dt>
-<dd><p>This method finds all of the indices that satisfy the requirement
-that d leq sum_{i=1}^d leq d + mu.  Once we have these, then
-they can be used to build both the grid and the polynomial
-basis.</p>
+<dd><p>Finds all of the indices that satisfy the requirement that
+<span class="math">\(d \leq \sum_{i=1}^d \leq d + \mu\)</span>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>d</strong> : int</p>
+<blockquote>
+<div><p>The number of dimensions in the grid</p>
+</div></blockquote>
+<p><strong>mu</strong> : int or array</p>
+<blockquote>
+<div><p>The parameter mu defining the density of the grid. If an array,
+there must be d elements and an anisotropic grid is formed</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>true_inds</strong> : Array</p>
+<blockquote class="last">
+<div><p>A 1-d Any array containing all d element arrays satisfying the
+constraint</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 <p class="rubric">Notes</p>
-<p>This method sets the attribute smol_inds</p>
+<p>This function is used directly by build_grid and poly_inds</p>
 </dd></dl>
 
 </div>
