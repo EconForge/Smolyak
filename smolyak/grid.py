@@ -296,7 +296,12 @@ class SmolyakGrid(object):
 
     Examples
     --------
-    s = SmolyakGrid(3, 2)
+    >>> s = SmolyakGrid(3, 2)
+    >>> s
+    Smolyak Grid:
+        d: 3
+        mu: 2
+        npoints: 25
 
     """
 
