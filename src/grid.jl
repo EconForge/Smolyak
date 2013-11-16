@@ -1,17 +1,28 @@
 """
 This file contains a class that builds a Smolyak Grid.  The hope is that
 it will eventually contain the interpolation routines necessary so that
-the given some data, this class can build a grid and use the Chebyshev
+the given some data, this class can build a grid and use the Chebychev
 polynomials to interpolate and approximate the data.
 
 Method based on Judd, Maliar, Maliar, Valero 2013 (W.P)
 
-Date: Fri Oct 18 07:47:11 2013 -0700
+Authors
+=======
 
-Author: Chase Coleman and Spencer Lyon
+- Chase Coleman (ccoleman@stern.nyu.edu)
+- Spencer Lyon (slyon@stern.nyu.edu)
+
+References
+==========
+Judd, Kenneth L, Lilia Maliar, Serguei Maliar, and Rafael Valero. 2013.
+    "Smolyak Method for Solving Dynamic Economic Models: Lagrange
+    Interpolation, Anisotropic Grid and Adaptive Domain".
+
+Krueger, Dirk, and Felix Kubler. 2004. "Computing Equilibrium in OLG
+    Models with Stochastic Production." Journal of Economic Dynamics and
+    Control 28 (7) (April): 1411-1436.
 
 """
-
 using Iterators
 using Cartesian
 import PyPlot
@@ -22,13 +33,28 @@ import Base.show
 #- Building Blocks -#
 ## --------------- ##
 
+# union type to handle isotropic/anisotropic mu parameters
+IntSorV = Union(Int, Vector{Int})
 
 function num_grid_pts(d::Int, mu::Int)
     """
-    Uses known polynomials for generating the number of grid points for
-    a given d and mu. As of right now, this only works when mu <= 3.
-    """
+    Checks the number of grid points for a given d, mu combination.
 
+    Parameters
+    ----------
+    d, mu : int
+        The parameters d and mu that specify the grid
+
+    Returns
+    -------
+    num : int
+        The number of points that would be in a grid with params d, mu
+
+    Notes
+    -----
+    This function is only defined for mu = 1, 2, or 3
+
+    """
     if mu == 1
         return int(2d - 1)
     elseif mu == 2
@@ -43,8 +69,27 @@ end
 
 function m_i(i::Int)
     """
-    Compute m(i) for a given i. This is defined m_i(1) = 1,
-    m_i(i) = 2^(i-1) + 1 for all i > 1.
+    Compute one plus the "total degree of the interpolating
+    polynoimals" (Kruger & Kubler, 2004). This shows up many times in
+    Smolyak's algorithm. It is defined as:
+
+    .. math::
+
+        m_i = \\begin\{cases\}
+        1 \\quad & \\text\{if \} i = 1 \\\\
+        2^\{i-1\} + 1 \\quad & \\text\{if \} i \\geq 2
+        \\end\{cases\}
+
+    Parameters
+    ----------
+    i : int
+        The integer i which the total degree should be evaluated
+
+    Returns
+    -------
+    num : int
+        Return the value given by the expression above
+
     """
     if i < 0
         error("DomainError: i must be positive")
@@ -60,9 +105,32 @@ end
 
 function cheby2n{T<:Number}(x::Array{T, 1}, n::Int; kind::Real=1)
     """
-    Evaluates the first n+1 Chebyshev polynomials of the 'kind' kind at x
-    NOTE: This will only work when kind = 1 or kind = 2
-    NOTE: We evaluate the first n+1, with the first dimension being all 1's
+    Computes the first :math:`n+1` Chebychev polynomials of the first
+    kind evaluated at each point in :math:`x` .
+
+    Parameters
+    ----------
+    x : float or array(float)
+        A single point (float) or an array of points where each
+        polynomial should be evaluated
+
+    n : int
+        The integer specifying which Chebychev polynomial is the last
+        to be computed
+
+    kind : float, optional(default=1.0)
+        The "kind" of Chebychev polynomial to compute. Only accepts
+        values 1 for first kind or 2 for second kind
+
+    Returns
+    -------
+    results : array (float, ndim=x.ndim+1)
+        The results of computation. This will be an :math:`(n+1 \\times
+        dim \\dots)` where :math:`(dim \\dots)` is the shape of x. Each
+        slice along the first dimension represents a new Chebychev
+        polynomial. This dimension has length :math:`n+1` because it
+        includes :math:`\\phi_0` which is equal to 1 :math:`\\forall x`
+
     """
 
     dim = length(x)
@@ -94,7 +162,20 @@ end
 
 function s_n(n::Int)
     """
-    Compute the set s_n. All points are extrema of Chebyshev polynomials
+    Finds the set :math:`S_n` , which is the :math:`n` th Smolyak set of
+    Chebychev extrema
+
+    Parameters
+    ----------
+    n : int
+        The index :math:`n` specifying which Smolyak set to compute
+
+    Returns
+    -------
+    s_n : array (float, ndim=1)
+        An array containing all the Chebychev extrema in the set
+        :math:`S_n`
+
     """
 
     if n < 1
@@ -136,23 +217,22 @@ end
 
 function a_chain(n::Int)
     """
-    Return Dict of all A_n from n to 1. Keys are n, values are arrays of
-    points in A_n
-
-    This function improves on other algorithms by noting that A_{n} =
-    S_{n}[evens] except for A_1 = {0} and A_2 = {-1, 1}. Additionally,
-    A_{n} = A_{n+1}[odds] This prevents the calculation of these nodes
+    Finds all of the unidimensional disjoint sets of Chebychev extrema
+    that are used to construct the grid.  It improves on past algorithms
+    by noting  that :math:`A_{n} = S_{n}` [evens] except for :math:`A_1
+    = \{0\}`  and :math:`A_2 = \{-1, 1\}` . Additionally, :math:`A_{n} =
+    A_{n+1}` [odds] This prevents the calculation of these nodes
     repeatedly. Thus we only need to calculate biggest of the S_n's to
-    build the sequence of A_n's
+    build the sequence of :math:`A_n` 's
 
     Parameters
     ----------
-    n : scalar : int
+    n : int
       This is the number of disjoint sets from Sn that this should make
 
     Returns
     -------
-    A_chain : dict : lists
+    A_chain : dict (int -> list)
       This is a dictionary of the disjoint sets that are made.  They are
       indexed by the integer corresponding
 
@@ -178,6 +258,25 @@ end
 
 
 function phi_chain(n::Int)
+    """
+    For each number in 1 to n, compute the Smolyak indices for the
+    corresponding basis functions. This is the :math:`n` in
+    :math:`\\phi_n`
+
+    Parameters
+    ----------
+    n : int
+        The last Smolyak index :math:`n` for which the basis polynomial
+        indices should be found
+
+    Returns
+    -------
+    aphi_chain : dict (int -> list)
+        A dictionary whose keys are the Smolyak index :math:`n` and
+        values are lists containing all basis polynomial subscripts for
+        that Smolyak index
+
+    """
     max_ind = m_i(n)
     phi = Dict{Int, Array{Int64, 1}}()
     phi[1] = [1]
@@ -200,20 +299,21 @@ end
 # Isotropic inds
 function smol_inds(d::Int, mu::Int)
     """
-    This function finds all of the indices that satisfy the requirement
-    that d \leq \sum_{i=1}^d \leq d + \mu.
+    Finds all of the indices that satisfy the requirement that
+    :math:`d \leq \sum_{i=1}^d \leq d + \mu`.
 
     Parameters
     ----------
     d : int
         The number of dimensions in the grid
 
-    mu : int
-        The parameter mu defining the density of the grid
+    mu : int or array (int, ndim=1)
+        The parameter mu defining the density of the grid. If an array,
+        there must be d elements and an anisotropic grid is formed
 
     Returns
     -------
-    true_inds : Array
+    true_inds : array
         A 1-d Any array containing all d element arrays satisfying the
         constraint
 
@@ -283,46 +383,52 @@ function smol_inds(d::Int, mu::Array{Int, 1})
 end
 
 
-function poly_inds(d::Int, mu::Int)
+function poly_inds(d::Int, mu::IntSorV, inds::Array{Any}={})
     """
-    Build indices specifying all the cartesian products of Chebychev
-    polynomials needed to build smolyak polynomial
+    Build indices specifying all the Cartesian products of Chebychev
+    polynomials needed to build Smolyak polynomial
 
     Parameters
     ----------
-    d : Int
+    d : int
         The number of dimensions in grid / polynomial
 
     mu : int
         The parameter mu defining the density of the grid
 
+    inds : list (list (int)), optional (default=None)
+        The Smolyak indices for parameters d and mu. Should be computed
+        by calling `smol_inds(d, mu)`. If None is given, the indices
+        are computed using this function call
+
     Returns
     -------
-    phi_inds : Array{Int, 2}
+    phi_inds : array : (int, ndim=2)
         A two dimensional array of integers where each row specifies a
-        new set of indices needed to define a smolyak basis polynomial
+        new set of indices needed to define a Smolyak basis polynomial
 
     Notes
     -----
-    This function uses smol_inds and phi_chain. The output of this
-    function is used by build_B to construct the B matrix
+    This function uses phi_chain. The output of this function is used by
+    build_B to construct the B matrix
 
     """
-
-    true_inds = smol_inds(d, mu)
-    phi_n = phi_chain(mu + 1)
-    return vcat([ cartprod([phi_n[i] for i in el]) for el in true_inds]...)
+    if length(inds) == 0
+        inds = smol_inds(d, mu)
+    end
+    phi_n = phi_chain(maximum(mu) + 1)
+    return vcat([ cartprod([phi_n[i] for i in el]) for el in inds]...)
 end
 
 
 # Build grid
-function build_grid(d::Int, mu::Union(Int, Vector{Int}))
+function build_grid(d::Int, mu::IntSorV, inds::Array{Any}={})
     """
     Use disjoint Smolyak sets to construct Smolyak grid of degree d and
     density parameter :math:`mu`
 
-    The return value is an :math:`n \\times d` Array, where :math:`n` is the
-    number of points in the grid
+    The return value is an :math:`n \\times d` Array, where :math:`n`
+    is the number of points in the grid
 
     Parameters
     ----------
@@ -332,47 +438,62 @@ function build_grid(d::Int, mu::Union(Int, Vector{Int}))
     mu : int
         The density parameter for the grid
 
+    inds : list (list (int)), optional (default=None)
+        The Smolyak indices for parameters d and mu. Should be computed
+        by calling `smol_inds(d, mu)`. If None is given, the indices
+        are computed using this function call
+
     Returns
     -------
     grid : array (float, ndim=2)
         The Smolyak grid for the given d, :math:`mu`
 
     """
-
-    true_inds = smol_inds(d, mu)
+    if length(inds) == 0
+        inds = smol_inds(d, mu)
+    end
     An = a_chain(maximum(mu) + 1)  # use maximum in case mu is Vector
-    return vcat([ cartprod([An[i] for i in el]) for el in true_inds]...)
+    return vcat([ cartprod([An[i] for i in el]) for el in inds]...)
 end
 
 
 # Build B-matrix
-function build_B(d::Int, mu::Int, grid::Array{Float64, 2})
+function build_B(d::Int, mu::IntSorV, grid::Array{Float64, 2},
+                 inds::Array{Any}={})
     """
     Compute the matrix B from equation 22 in JMMV 2013
     Translation of dolo.numeric.interpolation.smolyak.SmolyakBasic
 
     Parameters
     ----------
-    d : Int
+    d : int
         The number of dimensions on the grid
 
-    mu : Int
+    mu : int or array (int, ndim=1, legnth=d)
         The mu parameter used to define grid
 
-    grid : Array{Float64, 2}
+    grid : array (float, dims=2)
         The smolyak grid returned by calling `build_grid(d, mu)`
+
+    inds : list (list (int)), optional (default=None)
+        The Smolyak indices for parameters d and mu. Should be computed
+        by calling `smol_inds(d, mu)`. If None is given, the indices
+        are computed using this function call
 
     Returns
     -------
-    B : Array{Float64, 2}
+    B : array (float, 2)
         The matrix B that represents the Smolyak polynomial
         corresponding to grid
 
     """
+    if length(inds) == 0
+        inds = smol_inds(d, mu)
+    end
 
-    Ts = cheby2n(grid, m_i(mu + 1))
+    Ts = cheby2n(grid, m_i(maximum(mu) + 1))
+    b_inds = poly_inds(d, mu, inds)
     n = size(grid, 1)
-    b_inds = poly_inds(d, mu)
     B = Array(Float64, n, n)
     for ind = 1:n
         B[:, ind] = reduce(.*, {slice(Ts, :, k, b_inds[ind, k]) for k=1:d})
@@ -389,7 +510,7 @@ end
 ### type SmolyakGrid
 type SmolyakGrid
     d::Int  # number of dimensions
-    mu::Union(Int, Vector{Int})  # density. Int or d element vector of Int
+    mu::IntSorV  # density. Int or d element vector of Int
     grid::Matrix{Float64}  # Smolyak grid
     inds::Array{Any, 1}  # Smolyak indices
     B::Matrix{Float64}  # matrix representing interpoland
@@ -405,9 +526,9 @@ type SmolyakGrid
             error("You passed mu = $mu. mu must be greater than 1")
         end
 
-        grid = build_grid(d, mu)
         inds = smol_inds(d, mu)
-        B = build_B(d, mu, grid)
+        grid = build_grid(d, mu, inds)
+        B = build_B(d, mu, grid, inds)
         lu_B = lu(B)
         B_L = lu_B[1]
         B_U = lu_B[2]
@@ -428,9 +549,9 @@ type SmolyakGrid
             error("mu must have d elements. It has $(length(mu))")
         end
 
-        grid = build_grid(d, mu)
         inds = smol_inds(d, mu)
-        B = build_B(d, maximum(mu), grid)
+        grid = build_grid(d, mu, inds)
+        B = build_B(d, mu, grid, inds)
         lu_B = lu(B)
         B_L = lu_B[1]
         B_U = lu_B[2]
@@ -451,7 +572,7 @@ function show(io::IO, sg::SmolyakGrid)
     non_zero_pts = nnz(sg.B)
     pct_non_zero = non_zero_pts / (npoints ^ 2)
     if isa(sg.mu, Array)
-        mu_str = replace(strip(string(sg.mu)), '\n', ", ")
+        mu_str = replace(strip(string(sg.mu)), '\n', " x ")
         msg = "Anisotropic Smolyak Grid:\n"
         msg *= "\td: $(sg.d)\n\tmu: $(mu_str)\n\tnpoints: $npoints"
         msg *= @sprintf "\n\tB: %.2f%% non-zero" pct_non_zero
@@ -482,8 +603,3 @@ function plot(sg::SmolyakGrid)
     end
 end
 
-#----------
-# Test case from dolo
-#----------
-
-# fun(x, y) = exp(- x .^ 2 - y .^ 2)
