@@ -25,20 +25,20 @@ def a_chain(n):
     """
     This method finds all of the unidimensional disjoint sets
     that we will use to construct the grid.  It improves on
-    past algorithms by noting that A_{n} = S_{n}[evens] except for
-    A_1 = {0} and A_2 = {-1, 1}. Additionally, A_{n} = A_{n+1}[odds]
-    This prevents the calculation of these nodes repeatedly.  Thus
-    we only need to calculate biggest of the S_n's to build the
-    sequence of A_n's
+    past algorithms by noting that :math:`A_{n} = S_{n}` [evens] except for
+    :math:`A_1 = \{0\}` and :math:`A_2 = \{-1, 1\}` . Additionally,
+    :math:`A_{n} = A_{n+1}` [odds] This prevents the calculation of these
+    nodes repeatedly.  Thus we only need to calculate biggest of the S_n's to
+    build the sequence of :math:`A_n` 's
 
     Parameters
     ----------
-    n : scalar : integer
+    n : scalar : int
       This is the number of disjoint sets from Sn that this should make
 
     Returns
     -------
-    A_chain : dictionary : lists
+    A_chain : dict (int -> list)
       This is a dictionary of the disjoint sets that are made.  They are
       indexed by the integer corresponding
     """
@@ -83,18 +83,34 @@ def _s_n(n):
 
 def smol_inds(d, mu):
     """
-    This method finds all of the indices that satisfy the requirement
-    that d \leq \sum_{i=1}^d \leq d + \mu.  Once we have these, then
-    they can be used to build both the grid and the polynomial
-    basis.
+    Finds all of the indices that satisfy the requirement that
+    :math:`d \leq \sum_{i=1}^d \leq d + \mu`.
+
+    Parameters
+    ----------
+    d : int
+        The number of dimensions in the grid
+
+    mu : int or array : int
+        The parameter mu defining the density of the grid. If an array,
+        there must be d elements and an anisotropic grid is formed
+
+    Returns
+    -------
+    true_inds : Array
+        A 1-d Any array containing all d element arrays satisfying the
+        constraint
 
     Notes
-    =====
-    This method sets the attribute smol_inds
+    -----
+    This function is used directly by build_grid and poly_inds
+
     """
     if type(mu)==int:
         max_mu = mu
     else:
+        if mu.size != d:
+            raise ValueError("mu must have d elements. It has %i" % mu.size)
         max_mu = int(np.max(mu))
 
     # Need to capture up to value mu + 1 so in python need mu+2
@@ -122,9 +138,6 @@ def build_grid(d, mu):
     """
     This method builds a grid for the object
 
-    Notes
-    =====
-    This method sets the attribute grid
     """
     # Get An chain
     An = a_chain(mu + 1)
@@ -148,8 +161,22 @@ def build_grid(d, mu):
 
 def phi_chain(n):
     """
-    Finds the disjoint sets of aphi's that will be used to compute
-    which functions we need to calculate
+    For each number in 1 to n, compute the Smolyak indices for the
+    corresponding basis functions. This is the :math:`n` in :math:`\\phi_n`
+
+    Parameters
+    ----------
+    n : int
+        The last Smolyak index :math:`n` for which the basis polynomial
+        indices should be found
+
+    Returns
+    -------
+    aphi_chain : dict (int -> list)
+        A dictionary whose keys are the Smolyak index :math:`n` and values are
+        lists containing all basis polynomial subscripts for that Smolyak
+        index
+
     """
 
     # First create a dictionary
@@ -169,8 +196,28 @@ def phi_chain(n):
 
 def poly_inds(d, mu):
     """
-    This function builds the indices of the basis polynomials that
-    will be used to interpolate.
+    Build indices specifying all the Cartesian products of Chebychev
+    polynomials needed to build Smolyak polynomial
+
+    Parameters
+    ----------
+    d : int
+        The number of dimensions in grid / polynomial
+
+    mu : int
+        The parameter mu defining the density of the grid
+
+    Returns
+    -------
+    phi_inds : Array{Int, 2}
+        A two dimensional array of integers where each row specifies a
+        new set of indices needed to define a smolyak basis polynomial
+
+    Notes
+    -----
+    This function uses smol_inds and phi_chain. The output of this
+    function is used by build_B to construct the B matrix
+
     """
     inds = smol_inds(d, mu)
     aphi = phi_chain(mu + 1)
@@ -191,12 +238,26 @@ def poly_inds(d, mu):
 
 def build_B(d, mu, grid):
     """
-    This function builds the matrix B that will be used to calc
-    the interpolation coefficients for a given set of data.
+    Compute the matrix B from equation 22 in JMMV 2013
+    Translation of dolo.numeric.interpolation.smolyak.SmolyakBasic
 
-    Notes
-    =====
-    This method sets the attributes B, B_L, B_U
+    Parameters
+    ----------
+    d : Int
+        The number of dimensions on the grid
+
+    mu : Int
+        The mu parameter used to define grid
+
+    grid : array : (float, dims=2)
+        The smolyak grid returned by calling `build_grid(d, mu)`
+
+    Returns
+    -------
+    B : Array{Float64, 2}
+        The matrix B that represents the Smolyak polynomial
+        corresponding to grid
+
     """
     Ts = cheby2n(grid.T, m_i(mu + 1))
     base_polys = poly_inds(d, mu)
