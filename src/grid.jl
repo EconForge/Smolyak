@@ -9,6 +9,7 @@ Method based on Judd, Maliar, Maliar, Valero 2013 (W.P)
 Date: Fri Oct 18 07:47:11 2013 -0700
 
 Author: Chase Coleman and Spencer Lyon
+
 """
 
 using Iterators
@@ -17,9 +18,9 @@ import PyPlot
 require("util")
 import Base.show
 
-## ------------- ##
-#- Generic Tools -#
-## ------------- ##
+## --------------- ##
+#- Building Blocks -#
+## --------------- ##
 
 
 function num_grid_pts(d::Int, mu::Int)
@@ -181,11 +182,11 @@ function phi_chain(n::Int)
 end
 
 
-## --------------- ##
-#- Isotropic Grids -#
-## --------------- ##
+## ---------------------- ##
+#- Construction Utilities -#
+## ---------------------- ##
 
-
+# Isotropic inds
 function smol_inds(d::Int, mu::Int)
     """
     This function finds all of the indices that satisfy the requirement
@@ -213,7 +214,7 @@ function smol_inds(d::Int, mu::Int)
 
     p_vals = [1:mu + 1]
 
-    poss_inds = cell(1)  # see below
+    poss_inds = {}
 
     for el in Task(()-> comb_with_replacement(p_vals, d))
         if d < sum(el) <= d + mu
@@ -221,13 +222,45 @@ function smol_inds(d::Int, mu::Int)
         end
     end
 
-    # cell(1) gives undefined reference in first slot. We remove it here
-    poss_inds = poss_inds[2:]
+    true_inds = Any[ones(Int64, d)]  # we will always have (1, 1, ...,  1)
+    for val in poss_inds
+        for el in Task(()->pmute(val))
+            push!(true_inds, el)
+        end
+    end
+
+    return true_inds
+end
+
+
+# Ansotropic inds
+function smol_inds(d::Int, mu::Array{Int, 1})
+    # Compute indices needed for anisotropic smolyak grid given number of
+    # dimensions d and a vector of mu parameters mu
+
+    if length(mu) != d
+        error("ValueError: mu must have d elements.")
+    end
+
+    mu_max = maximum(mu)
+    mup1 = mu + 1
+
+    p_vals = [1:mu_max + 1]
+
+    poss_inds = {}
+
+    for el in Task(()-> comb_with_replacement(p_vals, d))
+        if d < sum(el) <= d + mu_max
+            push!(poss_inds, el)
+        end
+    end
 
     true_inds = Any[ones(Int64, d)]
     for val in poss_inds
         for el in Task(()->pmute(val))
-            push!(true_inds, el)
+            if all(el .<= mup1)
+                push!(true_inds, el)
+            end
         end
     end
 
@@ -268,7 +301,7 @@ end
 
 
 # Build grid
-function build_grid(d::Int, mu::Int)
+function build_grid(d::Int, mu::Union(Int, Vector{Int}))
     """
     Use disjoint Smolyak sets to construct Smolyak grid of degree d and
     density parameter mu
@@ -279,7 +312,7 @@ function build_grid(d::Int, mu::Int)
     """
 
     true_inds = smol_inds(d, mu)
-    An = a_chain(mu + 1)
+    An = a_chain(maximum(mu) + 1)
     return vcat([ cartprod([An[i] for i in el]) for el in true_inds]...)
 end
 
@@ -320,16 +353,22 @@ function build_B(d::Int, mu::Int, grid::Array{Float64, 2})
 end
 
 
+## ----------------- ##
+#- Type: SmolyakGrid -#
+## ----------------- ##
+
+
 ### type SmolyakGrid
 type SmolyakGrid
     d::Int  # number of dimensions
-    mu::Int  # density parameter
+    mu::Union(Int, Vector{Int})  # density. Int or d element vector of Int
     grid::Matrix{Float64}  # Smolyak grid
     inds::Array{Any, 1}  # Smolyak indices
     B::Matrix{Float64}  # matrix representing interpoland
     B_L::Matrix{Float64}  # L from LU decomposition of B
     B_U::Matrix{Float64}  # U from LU decomposition of B
 
+    # Isotropic constructor
     function SmolyakGrid(d::Int, mu::Int)
         if d < 2
             error("You passed d = $d. d must be greater than 1")
@@ -348,94 +387,8 @@ type SmolyakGrid
         new(d, mu, grid, inds, B, B_L, B_U)
     end
 
-    # Default constructor, just in case someone gets brave
-    function SmolyakGrid(d, mu, grid, inds, B, B_L, B_U)
-        new(d, mu, grid, inds, B, B_L, B_U)
-    end
-end
-
-
-function show(io::IO, sg::SmolyakGrid)
-    "show method for SmolyakGrid type"
-    npoints = size(sg.grid, 1)
-    non_zero_pts = nnz(sg.B)
-    pct_non_zero = non_zero_pts / (npoints ^ 2)
-    msg = "Smolyak Grid:\n\td: $(sg.d)\n\tmu: $(sg.mu)\n\tnpoints: $npoints"
-    msg *= @sprintf "\n\tB: %.2f%% non-zero" pct_non_zero
-    print(io, msg)
-end
-
-
-## ----------------- ##
-#- Anisotropic Grids -#
-## ----------------- ##
-
-
-function smol_inds(d::Int, mu::Array{Int, 1})
-    # Compute indices needed for anisotropic smolyak grid given number of
-    # dimensions d and a vector of mu parameters mu
-
-    if length(mu) != d
-        error("ValueError: mu must have d elements.")
-    end
-
-    mu_max = maximum(mu)
-    mup1 = mu + 1
-
-    p_vals = [1:mu_max + 1]
-
-    poss_inds = cell(1)  # see below
-
-    for el in Task(()-> comb_with_replacement(p_vals, d))
-        if d < sum(el) <= d + mu_max
-            push!(poss_inds, el)
-        end
-    end
-
-    # cell(1) gives undefined reference in first slot. We remove it here
-    poss_inds = poss_inds[2:]
-
-    true_inds = Any[ones(Int64, d)]
-    for val in poss_inds
-        for el in Task(()->pmute(val))
-            if all(el .<= mup1)
-                push!(true_inds, el)
-            end
-        end
-    end
-
-    return true_inds
-end
-
-
-# Build grid
-function build_grid(d::Int, mu::Array{Int, 1})
-    """
-    Use disjoint Smolyak sets to construct Smolyak grid of degree d and
-    density parameter mu
-
-    The return value is an n x d Array, where n is the number of points
-    in the grid
-
-    """
-
-    true_inds = smol_inds(d, mu)
-    An = a_chain(maximum(mu) + 1)
-    return vcat([ cartprod([An[i] for i in el]) for el in true_inds]...)
-end
-
-
-### type ASmolyakGrid (Anisotropic Smolyak grid)
-type ASmolyakGrid
-    d::Int  # number of dimensions
-    mu::Array{Int, 1}  # density parameter. Array One for per dimension
-    grid::Matrix{Float64}  # Smolyak grid
-    inds::Array{Any, 1}  # Smolyak indices
-    B::Matrix{Float64}  # matrix representing interpoland
-    B_L::Matrix{Float64}  # L from LU decomposition of B
-    B_U::Matrix{Float64}  # U from LU decomposition of B
-
-    function ASmolyakGrid(d::Int, mu::Array{Int, 1})
+    # Anisotropic constructor
+    function SmolyakGrid(d::Int, mu::Array{Int, 1})
         if d < 2
             error("You passed d = $d. d must be greater than 1")
         end
@@ -458,21 +411,26 @@ type ASmolyakGrid
     end
 
     # Default constructor, just in case someone gets brave
-    function ASmolyakGrid(d, mu, grid, inds, B, B_L, B_U)
+    function SmolyakGrid(d, mu, grid, inds, B, B_L, B_U)
         new(d, mu, grid, inds, B, B_L, B_U)
     end
 end
 
 
-function show(io::IO, sg::ASmolyakGrid)
-    "show method for ASmolyakGrid type"
+function show(io::IO, sg::SmolyakGrid)
+    "show method for SmolyakGrid type"
     npoints = size(sg.grid, 1)
     non_zero_pts = nnz(sg.B)
     pct_non_zero = non_zero_pts / (npoints ^ 2)
-    mu_str = replace(strip(string(ag.mu)), '\n', ", ")
-    msg = "Anisotropic Smolyak Grid:\n"
-    msg *= "\td: $(sg.d)\n\tmu: $(mu_str)\n\tnpoints: $npoints"
-    msg *= @sprintf "\n\tB: %.2f%% non-zero" pct_non_zero
+    if isa(sg.mu, Array)
+        mu_str = replace(strip(string(sg.mu)), '\n', ", ")
+        msg = "Anisotropic Smolyak Grid:\n"
+        msg *= "\td: $(sg.d)\n\tmu: $(mu_str)\n\tnpoints: $npoints"
+        msg *= @sprintf "\n\tB: %.2f%% non-zero" pct_non_zero
+    else
+        msg = "Smolyak Grid:\n\td: $(sg.d)\n\tmu: $(sg.mu)\n\tnpoints: $npoints"
+        msg *= @sprintf "\n\tB: %.2f%% non-zero" pct_non_zero
+    end
     print(io, msg)
 end
 
@@ -481,7 +439,7 @@ end
 #- Utilty funcitons -#
 ## ---------------- ##
 
-function plot(sg::Union(SmolyakGrid, ASmolyakGrid))
+function plot(sg::SmolyakGrid)
     g = sg.grid
     if size(g, 2) == 2
         PyPlot.plot(g[:, 1], g[:, 2], "b.")
