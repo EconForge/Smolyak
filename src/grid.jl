@@ -145,6 +145,17 @@ function a_chain(n::Int)
     repeatedly. Thus we only need to calculate biggest of the S_n's to
     build the sequence of A_n's
 
+    Parameters
+    ----------
+    n : scalar : int
+      This is the number of disjoint sets from Sn that this should make
+
+    Returns
+    -------
+    A_chain : dict : lists
+      This is a dictionary of the disjoint sets that are made.  They are
+      indexed by the integer corresponding
+
     """
 
     sn = s_n(n)
@@ -214,6 +225,7 @@ function smol_inds(d::Int, mu::Int)
 
     p_vals = [1:mu + 1]
 
+    # PERF: size_hint here if it is slow
     poss_inds = {}
 
     for el in Task(()-> comb_with_replacement(p_vals, d))
@@ -222,6 +234,7 @@ function smol_inds(d::Int, mu::Int)
         end
     end
 
+    # PERF: size_hint here if it is slow
     true_inds = Any[ones(Int64, d)]  # we will always have (1, 1, ...,  1)
     for val in poss_inds
         for el in Task(()->pmute(val))
@@ -247,6 +260,7 @@ function smol_inds(d::Int, mu::Array{Int, 1})
 
     p_vals = [1:mu_max + 1]
 
+    # PERF: size_hint here if it is slow
     poss_inds = {}
 
     for el in Task(()-> comb_with_replacement(p_vals, d))
@@ -255,6 +269,7 @@ function smol_inds(d::Int, mu::Array{Int, 1})
         end
     end
 
+    # PERF: size_hint here if it is slow
     true_inds = Any[ones(Int64, d)]
     for val in poss_inds
         for el in Task(()->pmute(val))
@@ -312,7 +327,7 @@ function build_grid(d::Int, mu::Union(Int, Vector{Int}))
     """
 
     true_inds = smol_inds(d, mu)
-    An = a_chain(maximum(mu) + 1)
+    An = a_chain(maximum(mu) + 1)  # use maximum in case mu is Vector
     return vcat([ cartprod([An[i] for i in el]) for el in true_inds]...)
 end
 
