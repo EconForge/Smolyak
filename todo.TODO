@@ -5,8 +5,10 @@ Julia:
   Ideas:
     ☐ I noticed that for (40, 2) there are 10764961 points in B, but only 3090461 are non-zero. That is only 28.7085%. Maybe we should use sparse matrices. We should do some testing to see if that would help. @spencer @started(13-11-08 01:34)
 
-
 Python:
  ☐ Interpolation Routines
  ☐ Anisotropic grids
  ☐ Non [-1, 1]^d grids/routines (see dolo)
+
+General Improvements:
+  ☐ Improve the build B function.  We spend 90%+ of our time stuck building it.
