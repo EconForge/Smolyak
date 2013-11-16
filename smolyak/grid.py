@@ -92,15 +92,23 @@ def smol_inds(d, mu):
     =====
     This method sets the attribute smol_inds
     """
+    if type(mu)==int:
+        max_mu = mu
+    else:
+        max_mu = int(np.max(mu))
+
     # Need to capture up to value mu + 1 so in python need mu+2
-    possible_values = range(1, mu + 2)
+    possible_values = range(1, max_mu + 2)
 
     # find all (i1, i2, ... id) such that their sum is in range
     # we want; this will cut down on later iterations
     poss_inds = [el for el in combinations_with_replacement(possible_values, d)
-                  if d < sum(el) <= d+mu]
+                  if d < sum(el) <= d+max_mu]
 
-    true_inds = [[el for el in permute(list(val))] for val in poss_inds]
+    if type(mu)==int:
+        true_inds = [[el for el in permute(list(val))] for val in poss_inds]
+    else:
+        true_inds = [[el for el in permute(list(val)) if all(el <= mu+1)] for val in poss_inds]
 
     # Add the d dimension 1 array so that we don't repeat it a bunch
     # of times
@@ -136,7 +144,7 @@ def build_grid(d, mu):
 
     grid = pd.lib.to_object_array_tuples(points).astype(float)
 
-    return grid
+    return grid, tinds
 
 def phi_chain(n):
     """
@@ -265,10 +273,6 @@ class SmolyakGrid(object):
         mu is a parameter that defines the fineness of grid that we
         want to build
 
-    do : str, optional(default='all')
-        do specifies whether you just want to build the grid or
-        whether it should build the whole object.  Only takes values
-        of "all" or "grid".  Default is "all"
 
     Attributes
     ----------
@@ -279,7 +283,7 @@ class SmolyakGrid(object):
         mu is a parameter that defines the fineness of grid that we
         want to build
 
-    grid : np.ndarray : floats
+    grid : array, float, ndim=2
         This is the sparse grid that we need to build
 
     inds : list : list
@@ -300,7 +304,7 @@ class SmolyakGrid(object):
 
     """
 
-    def __init__(self, d, mu, do="all"):
+    def __init__(self, d, mu):
         self.d = d
         self.mu = mu
 
@@ -311,11 +315,9 @@ class SmolyakGrid(object):
             raise ValueError('You are trying to build a one dimensional\
                              grid.')
 
-        self.grid = build_grid(self.d, self.mu)
-        self.inds = smol_inds(self.d, self.mu)
-        if do == "all":
-            self.B = build_B(self.d, self.mu, self.grid)
-
+        self.grid, self.inds = build_grid(self.d, self.mu)
+        # self.inds = smol_inds(self.d, self.mu)
+        self.B = build_B(self.d, self.mu, self.grid)
         # Compute LU decomposition
         l, u = lu(self.B, True)  # pass permute_l as true. See scipy docs
         self.B_L = l
