@@ -71,7 +71,11 @@
         
         
             <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../math.html">Mathematical Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../math.html">Mathematical Background</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../math.html#smolyak-grid">Smolyak Grid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../math.html#smolyak-basis-polynomials">Smolyak Basis Polynomials</a></li>
+</ul>
+</li>
 </ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../apidoc/modules.html">smolyak</a><ul>
@@ -109,29 +113,15 @@
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">This file contains a class that builds a Smolyak Grid.  The hope is that</span>
 <span class="sd">it will eventually contain the interpolation routines necessary so that</span>
-<span class="sd">the given some data, this class can build a grid and use the Chebychev</span>
+<span class="sd">the given some data, this class can build a grid and use the Chebyshev</span>
 <span class="sd">polynomials to interpolate and approximate the data.</span>
 
 <span class="sd">Method based on Judd, Maliar, Maliar, Valero 2013 (W.P)</span>
 
-<span class="sd">Authors</span>
-<span class="sd">=======</span>
-
-<span class="sd">- Chase Coleman (ccoleman@stern.nyu.edu)</span>
-<span class="sd">- Spencer Lyon (slyon@stern.nyu.edu)</span>
-
-<span class="sd">References</span>
-<span class="sd">==========</span>
-<span class="sd">Judd, Kenneth L, Lilia Maliar, Serguei Maliar, and Rafael Valero. 2013.</span>
-<span class="sd">    &quot;Smolyak Method for Solving Dynamic Economic Models: Lagrange</span>
-<span class="sd">    Interpolation, Anisotropic Grid and Adaptive Domain&quot;.</span>
-
-<span class="sd">Krueger, Dirk, and Felix Kubler. 2004. &quot;Computing Equilibrium in OLG</span>
-<span class="sd">    Models with Stochastic Production.&quot; Journal of Economic Dynamics and</span>
-<span class="sd">    Control 28 (7) (April): 1411-1436.</span>
+<span class="sd">Authors: Chase Coleman and Spencer Lyon</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+<span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">from</span> <span class="nn">operator</span> <span class="kn">import</span> <span class="n">mul</span>
 <span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">product</span><span class="p">,</span> <span class="n">combinations_with_replacement</span>
 <span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">chain</span>
@@ -142,129 +132,49 @@
 <span class="kn">from</span> <span class="nn">mpl_toolkits.mplot3d</span> <span class="kn">import</span> <span class="n">Axes3D</span>
 <span class="kn">from</span> <span class="nn">util</span> <span class="kn">import</span> <span class="o">*</span>
 
-<span class="c">## --------------- ##</span>
-<span class="c">#- Building Blocks -#</span>
-<span class="c">## --------------- ##</span>
 
-
-<div class="viewcode-block" id="num_grid_points"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.num_grid_points">[docs]</a><span class="k">def</span> <span class="nf">num_grid_points</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">mu</span><span class="p">):</span>
+<div class="viewcode-block" id="a_chain"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.a_chain">[docs]</a><span class="k">def</span> <span class="nf">a_chain</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Checks the number of grid points for a given d, mu combination.</span>
+<span class="sd">    This method finds all of the unidimensional disjoint sets</span>
+<span class="sd">    that we will use to construct the grid.  It improves on</span>
+<span class="sd">    past algorithms by noting that A_{n} = S_{n}[evens] except for</span>
+<span class="sd">    A_1 = {0} and A_2 = {-1, 1}. Additionally, A_{n} = A_{n+1}[odds]</span>
+<span class="sd">    This prevents the calculation of these nodes repeatedly.  Thus</span>
+<span class="sd">    we only need to calculate biggest of the S_n&#39;s to build the</span>
+<span class="sd">    sequence of A_n&#39;s</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    d, mu : int</span>
-<span class="sd">        The parameters d and mu that specify the grid</span>
+<span class="sd">    n : scalar : integer</span>
+<span class="sd">      This is the number of disjoint sets from Sn that this should make</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    num : int</span>
-<span class="sd">        The number of points that would be in a grid with params d, mu</span>
-
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-<span class="sd">    This function is only defined for mu = 1, 2, or 3</span>
-
+<span class="sd">    A_chain : dictionary : lists</span>
+<span class="sd">      This is a dictionary of the disjoint sets that are made.  They are</span>
+<span class="sd">      indexed by the integer corresponding</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">mu</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="k">return</span> <span class="mi">2</span><span class="o">*</span><span class="n">d</span> <span class="o">+</span> <span class="mi">1</span>
 
-    <span class="k">if</span> <span class="n">mu</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-        <span class="k">return</span> <span class="mi">1</span> <span class="o">+</span> <span class="mi">4</span><span class="o">*</span><span class="n">d</span> <span class="o">+</span> <span class="mi">4</span><span class="o">*</span><span class="n">d</span><span class="o">*</span><span class="p">(</span><span class="n">d</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="mf">2.</span>
+    <span class="c"># # Start w finding the biggest Sn(We will subsequently reduce it)</span>
+    <span class="n">Sn</span> <span class="o">=</span> <span class="n">_s_n</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">mu</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
-        <span class="k">return</span> <span class="mi">1</span> <span class="o">+</span> <span class="mi">8</span><span class="o">*</span><span class="n">d</span> <span class="o">+</span> <span class="mi">12</span><span class="o">*</span><span class="n">d</span><span class="o">*</span><span class="p">(</span><span class="n">d</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="mf">2.</span> <span class="o">+</span> <span class="mi">8</span><span class="o">*</span><span class="n">d</span><span class="o">*</span><span class="p">(</span><span class="n">d</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">d</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span><span class="o">/</span><span class="mf">6.</span>
+    <span class="n">A_chain</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">A_chain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.</span><span class="p">]</span>
+    <span class="n">A_chain</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">]</span>
 
+    <span class="c"># Need a for loop to extract remaining elements</span>
+    <span class="k">for</span> <span class="n">seq</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">num</span> <span class="o">=</span> <span class="n">Sn</span><span class="o">.</span><span class="n">size</span>
+        <span class="c"># Need odd indices in python because indexing starts at 0</span>
+        <span class="n">A_chain</span><span class="p">[</span><span class="n">seq</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">Sn</span><span class="p">[</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num</span><span class="p">,</span> <span class="mi">2</span><span class="p">)])</span>
+        <span class="c"># A_chain.append(list(Sn[range(1, num, 2)]))</span>
+        <span class="n">Sn</span> <span class="o">=</span> <span class="n">Sn</span><span class="p">[</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num</span><span class="p">,</span> <span class="mi">2</span><span class="p">)]</span>
+
+    <span class="k">return</span> <span class="n">A_chain</span>
 </div>
-<div class="viewcode-block" id="m_i"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.m_i">[docs]</a><span class="k">def</span> <span class="nf">m_i</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">_s_n</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Compute one plus the &quot;total degree of the interpolating</span>
-<span class="sd">    polynoimals&quot; (Kruger &amp; Kubler, 2004). This shows up many times in</span>
-<span class="sd">    Smolyak&#39;s algorithm. It is defined as:</span>
-
-<span class="sd">    .. math::</span>
-
-<span class="sd">        m_i = \\begin\{cases\}</span>
-<span class="sd">        1 \\quad &amp; \\text\{if \} i = 1 \\\\</span>
-<span class="sd">        2^\{i-1\} + 1 \\quad &amp; \\text\{if \} i \\geq 2</span>
-<span class="sd">        \\end\{cases\}</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    i : int</span>
-<span class="sd">        The integer i which the total degree should be evaluated</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    num : int</span>
-<span class="sd">        Return the value given by the expression above</span>
-
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;i must be positive&#39;</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">return</span> <span class="mi">0</span>
-    <span class="k">elif</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="k">return</span> <span class="mi">1</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="mi">2</span><span class="o">**</span><span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
-
-</div>
-<div class="viewcode-block" id="cheby2n"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.cheby2n">[docs]</a><span class="k">def</span> <span class="nf">cheby2n</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="mf">1.</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Computes the first :math:`n+1` Chebychev polynomials of the first</span>
-<span class="sd">    kind evaluated at each point in :math:`x` .</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    x : float or array(float)</span>
-<span class="sd">        A single point (float) or an array of points where each</span>
-<span class="sd">        polynomial should be evaluated</span>
-
-<span class="sd">    n : int</span>
-<span class="sd">        The integer specifying which Chebychev polynomial is the last</span>
-<span class="sd">        to be computed</span>
-
-<span class="sd">    kind : float, optional(default=1.0)</span>
-<span class="sd">        The &quot;kind&quot; of Chebychev polynomial to compute. Only accepts</span>
-<span class="sd">        values 1 for first kind or 2 for second kind</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    results : array (float, ndim=x.ndim+1)</span>
-<span class="sd">        The results of computation. This will be an :math:`(n+1 \\times</span>
-<span class="sd">        dim \\dots)` where :math:`(dim \\dots)` is the shape of x. Each</span>
-<span class="sd">        slice along the first dimension represents a new Chebychev</span>
-<span class="sd">        polynomial. This dimension has length :math:`n+1` because it</span>
-<span class="sd">        includes :math:`\\phi_0` which is equal to 1 :math:`\\forall x`</span>
-
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-    <span class="n">dim</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span>
-    <span class="n">results</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="p">)</span> <span class="o">+</span> <span class="n">dim</span><span class="p">)</span>
-    <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
-    <span class="n">results</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="n">kind</span>
-    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
-        <span class="n">results</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">x</span> <span class="o">*</span> <span class="n">results</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">-</span> <span class="n">results</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
-    <span class="k">return</span> <span class="n">results</span>
-
-</div>
-<div class="viewcode-block" id="s_n"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.s_n">[docs]</a><span class="k">def</span> <span class="nf">s_n</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Finds the set :math:`S_n` , which is the :math:`n` th Smolyak set of</span>
-<span class="sd">    Chebychev extrema</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    n : int</span>
-<span class="sd">        The index :math:`n` specifying which Smolyak set to compute</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    s_n : array (float, ndim=1)</span>
-<span class="sd">        An array containing all the Chebychev extrema in the set</span>
-<span class="sd">        :math:`S_n`</span>
-
+<span class="sd">    This method finds the element S_n for the Chebyshev Extrema</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
@@ -283,67 +193,67 @@
 
     <span class="k">return</span> <span class="n">vals</span>
 
-</div>
-<div class="viewcode-block" id="a_chain"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.a_chain">[docs]</a><span class="k">def</span> <span class="nf">a_chain</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+<div class="viewcode-block" id="smol_inds"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.smol_inds">[docs]</a><span class="k">def</span> <span class="nf">smol_inds</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">mu</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Finds all of the unidimensional disjoint sets of Chebychev extrema</span>
-<span class="sd">    that are used to construct the grid.  It improves on past algorithms</span>
-<span class="sd">    by noting  that :math:`A_{n} = S_{n}` [evens] except for :math:`A_1</span>
-<span class="sd">    = \{0\}`  and :math:`A_2 = \{-1, 1\}` . Additionally, :math:`A_{n} =</span>
-<span class="sd">    A_{n+1}` [odds] This prevents the calculation of these nodes</span>
-<span class="sd">    repeatedly. Thus we only need to calculate biggest of the S_n&#39;s to</span>
-<span class="sd">    build the sequence of :math:`A_n` &#39;s</span>
+<span class="sd">    This method finds all of the indices that satisfy the requirement</span>
+<span class="sd">    that d \leq \sum_{i=1}^d \leq d + \mu.  Once we have these, then</span>
+<span class="sd">    they can be used to build both the grid and the polynomial</span>
+<span class="sd">    basis.</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    n : int</span>
-<span class="sd">      This is the number of disjoint sets from Sn that this should make</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    A_chain : dict (int -&gt; list)</span>
-<span class="sd">      This is a dictionary of the disjoint sets that are made.  They are</span>
-<span class="sd">      indexed by the integer corresponding</span>
-
+<span class="sd">    Notes</span>
+<span class="sd">    =====</span>
+<span class="sd">    This method sets the attribute smol_inds</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># Need to capture up to value mu + 1 so in python need mu+2</span>
+    <span class="n">possible_values</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">mu</span> <span class="o">+</span> <span class="mi">2</span><span class="p">)</span>
 
-    <span class="c"># # Start w finding the biggest Sn(We will subsequently reduce it)</span>
-    <span class="n">Sn</span> <span class="o">=</span> <span class="n">s_n</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="c"># find all (i1, i2, ... id) such that their sum is in range</span>
+    <span class="c"># we want; this will cut down on later iterations</span>
+    <span class="n">poss_inds</span> <span class="o">=</span> <span class="p">[</span><span class="n">el</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">combinations_with_replacement</span><span class="p">(</span><span class="n">possible_values</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span>
+                  <span class="k">if</span> <span class="n">d</span> <span class="o">&lt;</span> <span class="nb">sum</span><span class="p">(</span><span class="n">el</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">d</span><span class="o">+</span><span class="n">mu</span><span class="p">]</span>
 
-    <span class="n">A_chain</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="n">A_chain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.</span><span class="p">]</span>
-    <span class="n">A_chain</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">]</span>
+    <span class="n">true_inds</span> <span class="o">=</span> <span class="p">[[</span><span class="n">el</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">permute</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">val</span><span class="p">))]</span> <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">poss_inds</span><span class="p">]</span>
 
-    <span class="c"># Need a for loop to extract remaining elements</span>
-    <span class="k">for</span> <span class="n">seq</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
-        <span class="n">num</span> <span class="o">=</span> <span class="n">Sn</span><span class="o">.</span><span class="n">size</span>
-        <span class="c"># Need odd indices in python because indexing starts at 0</span>
-        <span class="n">A_chain</span><span class="p">[</span><span class="n">seq</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">Sn</span><span class="p">[</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num</span><span class="p">,</span> <span class="mi">2</span><span class="p">)])</span>
-        <span class="c"># A_chain.append(list(Sn[range(1, num, 2)]))</span>
-        <span class="n">Sn</span> <span class="o">=</span> <span class="n">Sn</span><span class="p">[</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num</span><span class="p">,</span> <span class="mi">2</span><span class="p">)]</span>
+    <span class="c"># Add the d dimension 1 array so that we don&#39;t repeat it a bunch</span>
+    <span class="c"># of times</span>
+    <span class="n">true_inds</span><span class="o">.</span><span class="n">extend</span><span class="p">([[[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">d</span><span class="p">]])</span>
 
-    <span class="k">return</span> <span class="n">A_chain</span>
+    <span class="n">tinds</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">chain</span><span class="o">.</span><span class="n">from_iterable</span><span class="p">(</span><span class="n">true_inds</span><span class="p">))</span>
 
+    <span class="k">return</span> <span class="n">tinds</span>
+</div>
+<div class="viewcode-block" id="build_grid"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.build_grid">[docs]</a><span class="k">def</span> <span class="nf">build_grid</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">mu</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This method builds a grid for the object</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    =====</span>
+<span class="sd">    This method sets the attribute grid</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># Get An chain</span>
+    <span class="n">An</span> <span class="o">=</span> <span class="n">a_chain</span><span class="p">(</span><span class="n">mu</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">points</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c"># Need to get the correct indices</span>
+
+    <span class="n">tinds</span> <span class="o">=</span> <span class="n">smol_inds</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">mu</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">tinds</span><span class="p">:</span>
+        <span class="n">temp</span> <span class="o">=</span> <span class="p">[</span><span class="n">An</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">el</span><span class="p">]</span>
+        <span class="c"># Save these indices that we iterate through because</span>
+        <span class="c"># we need them for the chebyshev polynomial combination</span>
+        <span class="c"># inds.append(el)</span>
+        <span class="n">points</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">product</span><span class="p">(</span><span class="o">*</span><span class="n">temp</span><span class="p">)))</span>
+
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">to_object_array_tuples</span><span class="p">(</span><span class="n">points</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">grid</span>
 </div>
 <div class="viewcode-block" id="phi_chain"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.phi_chain">[docs]</a><span class="k">def</span> <span class="nf">phi_chain</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    For each number in 1 to n, compute the Smolyak indices for the</span>
-<span class="sd">    corresponding basis functions. This is the :math:`n` in</span>
-<span class="sd">    :math:`\\phi_n`</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    n : int</span>
-<span class="sd">        The last Smolyak index :math:`n` for which the basis polynomial</span>
-<span class="sd">        indices should be found</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    aphi_chain : dict (int -&gt; list)</span>
-<span class="sd">        A dictionary whose keys are the Smolyak index :math:`n` and</span>
-<span class="sd">        values are lists containing all basis polynomial subscripts for</span>
-<span class="sd">        that Smolyak index</span>
-
+<span class="sd">    Finds the disjoint sets of aphi&#39;s that will be used to compute</span>
+<span class="sd">    which functions we need to calculate</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="c"># First create a dictionary</span>
@@ -360,209 +270,40 @@
         <span class="n">curr_val</span> <span class="o">=</span> <span class="n">end_val</span><span class="o">+</span><span class="mi">1</span>
 
     <span class="k">return</span> <span class="n">aphi_chain</span>
-
-<span class="c">## ---------------------- ##</span>
-<span class="c">#- Construction Utilities -#</span>
-<span class="c">## ---------------------- ##</span>
-
 </div>
-<div class="viewcode-block" id="smol_inds"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.smol_inds">[docs]</a><span class="k">def</span> <span class="nf">smol_inds</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">mu</span><span class="p">):</span>
+<div class="viewcode-block" id="poly_inds"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.poly_inds">[docs]</a><span class="k">def</span> <span class="nf">poly_inds</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">mu</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Finds all of the indices that satisfy the requirement that</span>
-<span class="sd">    :math:`d \leq \sum_{i=1}^d \leq d + \mu`.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    d : int</span>
-<span class="sd">        The number of dimensions in the grid</span>
-
-<span class="sd">    mu : int or array (int, ndim=1)</span>
-<span class="sd">        The parameter mu defining the density of the grid. If an array,</span>
-<span class="sd">        there must be d elements and an anisotropic grid is formed</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    true_inds : array</span>
-<span class="sd">        A 1-d Any array containing all d element arrays satisfying the</span>
-<span class="sd">        constraint</span>
-
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-<span class="sd">    This function is used directly by build_grid and poly_inds</span>
-
+<span class="sd">    This function builds the indices of the basis polynomials that</span>
+<span class="sd">    will be used to interpolate.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-        <span class="n">max_mu</span> <span class="o">=</span> <span class="n">mu</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">mu</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="n">d</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;mu must have d elements. It has </span><span class="si">%i</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">mu</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
-        <span class="n">max_mu</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">mu</span><span class="p">))</span>
+    <span class="n">inds</span> <span class="o">=</span> <span class="n">smol_inds</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">mu</span><span class="p">)</span>
+    <span class="n">aphi</span> <span class="o">=</span> <span class="n">phi_chain</span><span class="p">(</span><span class="n">mu</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
 
-    <span class="c"># Need to capture up to value mu + 1 so in python need mu+2</span>
-    <span class="n">possible_values</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_mu</span> <span class="o">+</span> <span class="mi">2</span><span class="p">)</span>
-
-    <span class="c"># find all (i1, i2, ... id) such that their sum is in range</span>
-    <span class="c"># we want; this will cut down on later iterations</span>
-    <span class="n">poss_inds</span> <span class="o">=</span> <span class="p">[</span><span class="n">el</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">combinations_with_replacement</span><span class="p">(</span><span class="n">possible_values</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span>
-                 <span class="k">if</span> <span class="n">d</span> <span class="o">&lt;</span> <span class="nb">sum</span><span class="p">(</span><span class="n">el</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">d</span><span class="o">+</span><span class="n">max_mu</span><span class="p">]</span>
-
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-        <span class="n">true_inds</span> <span class="o">=</span> <span class="p">[[</span><span class="n">el</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">permute</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">val</span><span class="p">))]</span> <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">poss_inds</span><span class="p">]</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">true_inds</span> <span class="o">=</span> <span class="p">[[</span><span class="n">el</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">permute</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">val</span><span class="p">))</span> <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">el</span> <span class="o">&lt;=</span> <span class="n">mu</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span>
-                     <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">poss_inds</span><span class="p">]</span>
-
-    <span class="c"># Add the d dimension 1 array so that we don&#39;t repeat it a bunch</span>
-    <span class="c"># of times</span>
-    <span class="n">true_inds</span><span class="o">.</span><span class="n">extend</span><span class="p">([[[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">d</span><span class="p">]])</span>
-
-    <span class="n">tinds</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">chain</span><span class="o">.</span><span class="n">from_iterable</span><span class="p">(</span><span class="n">true_inds</span><span class="p">))</span>
-
-    <span class="k">return</span> <span class="n">tinds</span>
-
-</div>
-<div class="viewcode-block" id="poly_inds"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.poly_inds">[docs]</a><span class="k">def</span> <span class="nf">poly_inds</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">inds</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Build indices specifying all the Cartesian products of Chebychev</span>
-<span class="sd">    polynomials needed to build Smolyak polynomial</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    d : int</span>
-<span class="sd">        The number of dimensions in grid / polynomial</span>
-
-<span class="sd">    mu : int</span>
-<span class="sd">        The parameter mu defining the density of the grid</span>
-
-<span class="sd">    inds : list (list (int)), optional (default=None)</span>
-<span class="sd">        The Smolyak indices for parameters d and mu. Should be computed</span>
-<span class="sd">        by calling `smol_inds(d, mu)`. If None is given, the indices</span>
-<span class="sd">        are computed using this function call</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    phi_inds : array : (int, ndim=2)</span>
-<span class="sd">        A two dimensional array of integers where each row specifies a</span>
-<span class="sd">        new set of indices needed to define a Smolyak basis polynomial</span>
-
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-<span class="sd">    This function uses smol_inds and phi_chain. The output of this</span>
-<span class="sd">    function is used by build_B to construct the B matrix</span>
-
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">inds</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-        <span class="n">inds</span> <span class="o">=</span> <span class="n">smol_inds</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">mu</span><span class="p">)</span>
-
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-        <span class="n">max_mu</span> <span class="o">=</span> <span class="n">mu</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">max_mu</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">mu</span><span class="p">)</span>
-
-    <span class="n">aphi</span> <span class="o">=</span> <span class="n">phi_chain</span><span class="p">(</span><span class="n">max_mu</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="c"># Bring in polynomials</span>
+    <span class="c"># cheb_dict = self.calc_chebvals()</span>
 
     <span class="n">base_polys</span> <span class="o">=</span> <span class="p">[]</span>
 
     <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">inds</span><span class="p">:</span>
         <span class="n">temp</span> <span class="o">=</span> <span class="p">[</span><span class="n">aphi</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">el</span><span class="p">]</span>
         <span class="c"># Save these indices that we iterate through because</span>
-        <span class="c"># we need them for the chebychev polynomial combination</span>
+        <span class="c"># we need them for the chebyshev polynomial combination</span>
         <span class="c"># inds.append(el)</span>
         <span class="n">base_polys</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">product</span><span class="p">(</span><span class="o">*</span><span class="n">temp</span><span class="p">)))</span>
 
     <span class="k">return</span> <span class="n">base_polys</span>
-
 </div>
-<div class="viewcode-block" id="build_grid"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.build_grid">[docs]</a><span class="k">def</span> <span class="nf">build_grid</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">inds</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="build_B"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.build_B">[docs]</a><span class="k">def</span> <span class="nf">build_B</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">grid</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Use disjoint Smolyak sets to construct Smolyak grid of degree d and</span>
-<span class="sd">    density parameter :math:`mu`</span>
+<span class="sd">    This function builds the matrix B that will be used to calc</span>
+<span class="sd">    the interpolation coefficients for a given set of data.</span>
 
-<span class="sd">    The return value is an :math:`n \\times d` Array, where :math:`n`</span>
-<span class="sd">    is the number of points in the grid</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    d : int</span>
-<span class="sd">        The number of dimensions in the grid</span>
-
-<span class="sd">    mu : int</span>
-<span class="sd">        The density parameter for the grid</span>
-
-<span class="sd">    inds : list (list (int)), optional (default=None)</span>
-<span class="sd">        The Smolyak indices for parameters d and mu. Should be computed</span>
-<span class="sd">        by calling `smol_inds(d, mu)`. If None is given, the indices</span>
-<span class="sd">        are computed using this function call</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    grid : array (float, ndim=2)</span>
-<span class="sd">        The Smolyak grid for the given d, :math:`mu`</span>
-
+<span class="sd">    Notes</span>
+<span class="sd">    =====</span>
+<span class="sd">    This method sets the attributes B, B_L, B_U</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">inds</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-        <span class="n">inds</span> <span class="o">=</span> <span class="n">smol_inds</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">mu</span><span class="p">)</span>
-
-    <span class="c"># Get An chain</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-        <span class="n">An</span> <span class="o">=</span> <span class="n">a_chain</span><span class="p">(</span><span class="n">mu</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>  <span class="c"># Anisotropic case</span>
-        <span class="n">An</span> <span class="o">=</span> <span class="n">a_chain</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">mu</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-
-    <span class="n">points</span> <span class="o">=</span> <span class="p">[]</span>
-
-    <span class="c"># Need to get the correct indices</span>
-
-    <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">inds</span><span class="p">:</span>
-        <span class="n">temp</span> <span class="o">=</span> <span class="p">[</span><span class="n">An</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">el</span><span class="p">]</span>
-        <span class="c"># Save these indices that we iterate through because</span>
-        <span class="c"># we need them for the chebychev polynomial combination</span>
-        <span class="c"># inds.append(el)</span>
-        <span class="n">points</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">product</span><span class="p">(</span><span class="o">*</span><span class="n">temp</span><span class="p">)))</span>
-
-    <span class="n">grid</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">to_object_array_tuples</span><span class="p">(</span><span class="n">points</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">grid</span>
-
-</div>
-<div class="viewcode-block" id="build_B"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.build_B">[docs]</a><span class="k">def</span> <span class="nf">build_B</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">inds</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Compute the matrix B from equation 22 in JMMV 2013</span>
-<span class="sd">    Translation of dolo.numeric.interpolation.smolyak.SmolyakBasic</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    d : int</span>
-<span class="sd">        The number of dimensions on the grid</span>
-
-<span class="sd">    mu : int or array (int, ndim=1, legnth=d)</span>
-<span class="sd">        The mu parameter used to define grid</span>
-
-<span class="sd">    grid : array (float, dims=2)</span>
-<span class="sd">        The smolyak grid returned by calling `build_grid(d, mu)`</span>
-
-<span class="sd">    inds : list (list (int)), optional (default=None)</span>
-<span class="sd">        The Smolyak indices for parameters d and mu. Should be computed</span>
-<span class="sd">        by calling `smol_inds(d, mu)`. If None is given, the indices</span>
-<span class="sd">        are computed using this function call</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    B : array (float, 2)</span>
-<span class="sd">        The matrix B that represents the Smolyak polynomial</span>
-<span class="sd">        corresponding to grid</span>
-
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">inds</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-        <span class="n">inds</span> <span class="o">=</span> <span class="n">smol_inds</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">mu</span><span class="p">)</span>
-
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-        <span class="n">max_mu</span> <span class="o">=</span> <span class="n">mu</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">max_mu</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">mu</span><span class="p">)</span>
-
-    <span class="n">Ts</span> <span class="o">=</span> <span class="n">cheby2n</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">m_i</span><span class="p">(</span><span class="n">max_mu</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
-    <span class="n">base_polys</span> <span class="o">=</span> <span class="n">poly_inds</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">inds</span><span class="p">)</span>
+    <span class="n">Ts</span> <span class="o">=</span> <span class="n">cheby2n</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">m_i</span><span class="p">(</span><span class="n">mu</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">base_polys</span> <span class="o">=</span> <span class="n">poly_inds</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">mu</span><span class="p">)</span>
     <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span>
     <span class="n">B</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="s">&#39;F&#39;</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">comb</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">base_polys</span><span class="p">):</span>
@@ -570,133 +311,140 @@
                            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">d</span><span class="p">)])</span>
 
     <span class="k">return</span> <span class="n">B</span>
+</div>
+<div class="viewcode-block" id="cheby_eval"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.cheby_eval">[docs]</a><span class="k">def</span> <span class="nf">cheby_eval</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+    <span class="n">past_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">curr_val</span> <span class="o">=</span> <span class="n">x</span>
 
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">past_val</span>
 
-<span class="c">## ------------------ ##</span>
-<span class="c">#- Class: SmolyakGrid -#</span>
-<span class="c">## ------------------ ##</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">curr_val</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">temp</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="o">*</span><span class="n">curr_val</span> <span class="o">-</span> <span class="n">past_val</span>
+        <span class="n">past_val</span> <span class="o">=</span> <span class="n">curr_val</span>
+        <span class="n">curr_val</span> <span class="o">=</span> <span class="n">temp</span>
+
+    <span class="k">return</span> <span class="n">curr_val</span>
+</div>
+<div class="viewcode-block" id="cheby2n"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.cheby2n">[docs]</a><span class="k">def</span> <span class="nf">cheby2n</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+    <span class="c"># computes the chebychev polynomials of the first kind</span>
+    <span class="n">dim</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="p">)</span> <span class="o">+</span> <span class="n">dim</span><span class="p">)</span>
+    <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
+    <span class="n">results</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">results</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">x</span> <span class="o">*</span> <span class="n">results</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">...</span><span class="p">]</span> <span class="o">-</span> <span class="n">results</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="o">...</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">results</span>
+
+</div>
+<div class="viewcode-block" id="num_grid_points"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.num_grid_points">[docs]</a><span class="k">def</span> <span class="nf">num_grid_points</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">mu</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">mu</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">2</span><span class="o">*</span><span class="n">d</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="k">if</span> <span class="n">mu</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">1</span> <span class="o">+</span> <span class="mi">4</span><span class="o">*</span><span class="n">d</span> <span class="o">+</span> <span class="mi">4</span><span class="o">*</span><span class="n">d</span><span class="o">*</span><span class="p">(</span><span class="n">d</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="mf">2.</span>
+
+    <span class="k">if</span> <span class="n">mu</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">1</span> <span class="o">+</span> <span class="mi">8</span><span class="o">*</span><span class="n">d</span> <span class="o">+</span> <span class="mi">12</span><span class="o">*</span><span class="n">d</span><span class="o">*</span><span class="p">(</span><span class="n">d</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="mf">2.</span> <span class="o">+</span> <span class="mi">8</span><span class="o">*</span><span class="n">d</span><span class="o">*</span><span class="p">(</span><span class="n">d</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">d</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span><span class="o">/</span><span class="mf">6.</span>
+</div>
+<div class="viewcode-block" id="m_i"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.m_i">[docs]</a><span class="k">def</span> <span class="nf">m_i</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;i must be positive&#39;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">0</span>
+    <span class="k">elif</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">1</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">2</span><span class="o">**</span><span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+
 </div>
 <div class="viewcode-block" id="SmolyakGrid"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.SmolyakGrid">[docs]</a><span class="k">class</span> <span class="nc">SmolyakGrid</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    This class currently takes a dimension and a degree of polynomial</span>
 <span class="sd">    and builds the Smolyak Sparse grid.  We base this on the work by</span>
-<span class="sd">    Judd, Maliar, Maliar, and Valero (2013).</span>
+<span class="sd">    Judd Maliar Maliar and Valero.  Hope to obtain speed ups beyond</span>
+<span class="sd">    what they achieved.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    d : int</span>
-<span class="sd">        The number of dimensions in the grid</span>
-
-<span class="sd">    mu : int or array(int, ndim=1, length=d)</span>
-<span class="sd">        The &quot;density&quot; parameter for the grid</span>
-
-
-<span class="sd">    Attributes</span>
-<span class="sd">    ----------</span>
-<span class="sd">    d : int</span>
+<span class="sd">    d : scalar : integer</span>
 <span class="sd">        This is the dimension of grid that you are building</span>
 
-<span class="sd">    mu : int</span>
+<span class="sd">    mu : scalar : integer</span>
 <span class="sd">        mu is a parameter that defines the fineness of grid that we</span>
 <span class="sd">        want to build</span>
 
-<span class="sd">    grid : array (float, ndim=2)</span>
+<span class="sd">    do : str, optional(default=&#39;all&#39;)</span>
+<span class="sd">        do specifies whether you just want to build the grid or</span>
+<span class="sd">        whether it should build the whole object.  Only takes values</span>
+<span class="sd">        of &quot;all&quot; or &quot;grid&quot;.  Default is &quot;all&quot;</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    d : scalar : integer</span>
+<span class="sd">        This is the dimension of grid that you are building</span>
+
+<span class="sd">    mu : scalar : integer</span>
+<span class="sd">        mu is a parameter that defines the fineness of grid that we</span>
+<span class="sd">        want to build</span>
+
+<span class="sd">    grid : array, float, ndim=2</span>
 <span class="sd">        This is the sparse grid that we need to build</span>
 
-<span class="sd">    inds : list (list (int))</span>
+<span class="sd">    inds : list : list</span>
 <span class="sd">        This is a lists of lists that contains all of the indices</span>
 
-<span class="sd">    B : array (float, ndim=2)</span>
+<span class="sd">    B : np.ndarray : floats</span>
 <span class="sd">        This is the B matrix that is used to do lagrange interpolation</span>
 
-<span class="sd">    B_L : array (float, ndim=2)</span>
+<span class="sd">    B_L : np.ndarray : floats</span>
 <span class="sd">        Lower triangle matrix of the decomposition of B</span>
 
-<span class="sd">    B_U : array (float, ndim=2)</span>
+<span class="sd">    B_U : np.ndarray : floats</span>
 <span class="sd">        Upper triangle matrix of the decomposition of B</span>
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; s = SmolyakGrid(3, 2)</span>
-<span class="sd">    &gt;&gt;&gt; s</span>
-<span class="sd">    Smolyak Grid:</span>
-<span class="sd">        d: 3</span>
-<span class="sd">        mu: 2</span>
-<span class="sd">        npoints: 25</span>
-<span class="sd">        B: 0.65% non-zero</span>
-<span class="sd">    &gt;&gt;&gt; ag = SmolyakGrid(3, [1, 2, 3])</span>
-<span class="sd">    &gt;&gt;&gt; ag</span>
-<span class="sd">    Anisotropic Smolyak Grid:</span>
-<span class="sd">        d: 3</span>
-<span class="sd">        mu: 1 x 2 x 3</span>
-<span class="sd">        npoints: 51</span>
-<span class="sd">        B: 0.68% non-zero</span>
+<span class="sd">    s = SmolyakGrid(3, 2)</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">mu</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">do</span><span class="o">=</span><span class="s">&quot;all&quot;</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">d</span> <span class="o">=</span> <span class="n">d</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">=</span> <span class="n">mu</span>
+
+        <span class="k">if</span> <span class="n">mu</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;The parameter mu needs to be &gt; 1.&#39;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">d</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Number of dimensions must be &gt;= 2&#39;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;You are trying to build a one dimensional</span><span class="se">\</span>
+<span class="s">                             grid.&#39;</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>  <span class="c"># Isotropic case</span>
-            <span class="k">if</span> <span class="n">mu</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;The parameter mu needs to be &gt; 1.&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">build_grid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inds</span> <span class="o">=</span> <span class="n">smol_inds</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">do</span> <span class="o">==</span> <span class="s">&quot;all&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">B</span> <span class="o">=</span> <span class="n">build_B</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="p">)</span>
+            <span class="c"># Compute LU decomposition</span>
+            <span class="n">l</span><span class="p">,</span> <span class="n">u</span> <span class="o">=</span> <span class="n">lu</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>  <span class="c"># pass permute_l as true. See scipy docs</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">B_L</span> <span class="o">=</span> <span class="n">l</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">B_U</span> <span class="o">=</span> <span class="n">u</span>
 
-            <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">=</span> <span class="n">mu</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">inds</span> <span class="o">=</span> <span class="n">smol_inds</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">mu</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">build_grid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">inds</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">B</span> <span class="o">=</span> <span class="n">build_B</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">inds</span><span class="p">)</span>
 
-        <span class="k">else</span><span class="p">:</span>  <span class="c"># Anisotropic case</span>
-            <span class="n">mu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">mu</span><span class="p">)</span>
-
-            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">mu</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Each element in mu needs to be &gt; 1.&#39;</span><span class="p">)</span>
-
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">mu</span><span class="p">)</span> <span class="o">!=</span> <span class="n">d</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;For Anisotropic grid, mu must have len d &quot;</span><span class="p">)</span>
-
-            <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">=</span> <span class="n">mu</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">inds</span> <span class="o">=</span> <span class="n">smol_inds</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">mu</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">build_grid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">inds</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">B</span> <span class="o">=</span> <span class="n">build_B</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">inds</span><span class="p">)</span>
-
-        <span class="c"># Compute LU decomposition of B</span>
-        <span class="n">l</span><span class="p">,</span> <span class="n">u</span> <span class="o">=</span> <span class="n">lu</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>  <span class="c"># pass permute_l as true. See scipy docs</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">B_L</span> <span class="o">=</span> <span class="n">l</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">B_U</span> <span class="o">=</span> <span class="n">u</span>
 
     <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">npoints</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">nz_pts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="p">)</span>
-        <span class="n">pct_nz</span> <span class="o">=</span> <span class="n">nz_pts</span> <span class="o">/</span> <span class="p">(</span><span class="n">npoints</span> <span class="o">**</span> <span class="mf">2.</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-            <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;Smolyak Grid:</span><span class="se">\n\t</span><span class="s">d: {0} </span><span class="se">\n\t</span><span class="s">mu: {1} </span><span class="se">\n\t</span><span class="s">npoints: {2}&quot;</span>
-            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;</span><span class="se">\n\t</span><span class="s">B: {3:.2f}% non-zero&quot;</span>
-            <span class="k">return</span> <span class="n">msg</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">pct_nz</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>  <span class="c"># Anisotropic grid</span>
-            <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;Anisotropic Smolyak Grid:&quot;</span>
-            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;</span><span class="se">\n\t</span><span class="s">d: {0} </span><span class="se">\n\t</span><span class="s">mu: {1} </span><span class="se">\n\t</span><span class="s">npoints: {2}&quot;</span>
-            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;</span><span class="se">\n\t</span><span class="s">B: {3:.2f}% non-zero&quot;</span>
-            <span class="n">mu_str</span> <span class="o">=</span> <span class="s">&quot; x &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">))</span>
-            <span class="k">return</span> <span class="n">msg</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d</span><span class="p">,</span> <span class="n">mu_str</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">pct_nz</span><span class="p">)</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;Smolyak Grid:</span><span class="se">\n\t</span><span class="s">d: {0} </span><span class="se">\n\t</span><span class="s">mu: {1} </span><span class="se">\n\t</span><span class="s">npoints: {2}&quot;</span>
+        <span class="k">return</span> <span class="n">msg</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 
     <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__repr__</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__repr__</span><span class="p">)</span>
 
 <div class="viewcode-block" id="SmolyakGrid.plot_grid"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.SmolyakGrid.plot_grid">[docs]</a>    <span class="k">def</span> <span class="nf">plot_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Beautifully plots the grid for the 2d and 3d cases</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        None</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        None</span>
+<span class="sd">        This is a simple function that beautifully plots the grid for</span>
+<span class="sd">        the 2 and 3d cases</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid</span>
