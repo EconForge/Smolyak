@@ -44,13 +44,7 @@ clean:
 
 GH_PAGES_SOURCES = scipy-sphinx-theme source sphinxext Makefile ../smolyak
 
-test:
-	cd ../../
-	pwd
-	ls
-
 gh-pages:
-	python ../setup.py install
 	git checkout gh-pages
 	rm -rf ../build ../_sources ../_static ../_modules ../apidoc
 	git checkout master $(GH_PAGES_SOURCES)
