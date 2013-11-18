@@ -71,7 +71,11 @@
         
         
             <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../math.html">Mathematical Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../math.html">Mathematical Background</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../math.html#smolyak-grid">Smolyak Grid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../math.html#smolyak-basis-polynomials">Smolyak Basis Polynomials</a></li>
+</ul>
+</li>
 </ul>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../apidoc/modules.html">smolyak</a><ul>
@@ -177,17 +181,17 @@
 
 </div>
 <div class="viewcode-block" id="m_i"><a class="viewcode-back" href="../../apidoc/smolyak.html#smolyak.grid.m_i">[docs]</a><span class="k">def</span> <span class="nf">m_i</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">r&quot;&quot;&quot;</span>
 <span class="sd">    Compute one plus the &quot;total degree of the interpolating</span>
 <span class="sd">    polynoimals&quot; (Kruger &amp; Kubler, 2004). This shows up many times in</span>
 <span class="sd">    Smolyak&#39;s algorithm. It is defined as:</span>
 
 <span class="sd">    .. math::</span>
 
-<span class="sd">        m_i = \\begin\{cases\}</span>
-<span class="sd">        1 \\quad &amp; \\text\{if \} i = 1 \\\\</span>
-<span class="sd">        2^\{i-1\} + 1 \\quad &amp; \\text\{if \} i \\geq 2</span>
-<span class="sd">        \\end\{cases\}</span>
+<span class="sd">        m_i = \begin{cases}</span>
+<span class="sd">        1 \quad &amp; \text{if } i = 1 \\</span>
+<span class="sd">        2^{i-1} + 1 \quad &amp; \text{if } i \geq 2</span>
+<span class="sd">        \end{cases}</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>

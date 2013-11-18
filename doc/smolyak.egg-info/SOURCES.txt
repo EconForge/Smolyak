@@ -1,0 +1,17 @@
+smolyak.egg-info/PKG-INFO
+smolyak.egg-info/SOURCES.txt
+smolyak.egg-info/dependency_links.txt
+smolyak.egg-info/top_level.txt
+sphinxext/__init__.py
+sphinxext/comment_eater.py
+sphinxext/compiler_unparse.py
+sphinxext/docscrape.py
+sphinxext/docscrape_sphinx.py
+sphinxext/ipython_console_highlighting.py
+sphinxext/ipython_directive.py
+sphinxext/numpydoc.py
+sphinxext/only_directives.py
+sphinxext/phantom_import.py
+sphinxext/plot_directive.py
+sphinxext/setup.py
+sphinxext/traitsdoc.py
