@@ -1,8 +1,0 @@
-setup.py
-smolyak/__init__.py
-smolyak/grid.py
-smolyak/util.py
-smolyak.egg-info/PKG-INFO
-smolyak.egg-info/SOURCES.txt
-smolyak.egg-info/dependency_links.txt
-smolyak.egg-info/top_level.txt
