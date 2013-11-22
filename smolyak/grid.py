@@ -101,6 +101,51 @@ def m_i(i):
     else:
         return 2**(i - 1) + 1
 
+def chebyvalto(x, n, kind=1.):
+    """
+    Computes first :math:`n` Chebychev polynomials of the first kind
+    evaluated at each point in :math:`x` and places them side by side
+    in a matrix.  NOTE: Not including the first Chebychev polynomial
+    because it is simply a set of ones
+
+    Parameters
+    ----------
+    x : float or array(float)
+        A single point (float) or an array of points where each
+        polynomial should be evaluated
+
+    n : int
+        The integer specifying which Chebychev polynomial is the last
+        to be computed
+
+    kind : float, optional(default=1.0)
+        The "kind" of Chebychev polynomial to compute. Only accepts
+        values 1 for first kind or 2 for second kind
+
+    Returns
+    -------
+    results : array (float, ndim=x.ndim+1)
+        The results of computation. This will be an :math:`(n+1 \\times
+        dim \\dots)` where :math:`(dim \\dots)` is the shape of x. Each
+        slice along the first dimension represents a new Chebychev
+        polynomial. This dimension has length :math:`n+1` because it
+        includes :math:`\\phi_0` which is equal to 1 :math:`\\forall x`
+    """
+    x = np.asarray(x)
+    row, col = x.shape
+
+    ret_matrix = np.zeros((row, col * (n-1)))
+
+    init = np.ones((row, col))
+    ret_matrix[:, :col] = x * kind
+    ret_matrix[:, col:2*col] = 2 * x * ret_matrix[:, :col] - init
+
+    for i in xrange(3, n):
+        ret_matrix[:, col*(i-1): col*(i)] = 2 * x * ret_matrix[:, col*(i-1):col*i] \
+                                         - ret_matrix[:, col*(i-2): col*(i-1)]
+
+    return ret_matrix
+
 
 def cheby2n(x, n, kind=1.):
     """
@@ -462,6 +507,67 @@ def build_B(d, mu, grid, inds=None):
                            for i in range(d)])
 
     return B
+
+def exp_B(d, mu, grid):
+    """
+    write a nice doc string if it works
+    """
+
+    if mu >= 2*d:
+        raise ValueError('If you are setting mu bigger than 2d then \
+                         you are basically on your own... If you are\
+                         in low dimensions use brute force B')
+
+    npts = grid.shape[0]
+    num_chebs = m_i(mu + 1)
+    max_ind = d + mu
+
+    B = np.ones((npts, npts))
+
+    # These are simply all the values of phi_n (up to n=mu+1) where all
+    # other indices on the phi are 1 (hence valued at 1)
+    easy_B = chebyvalto(grid, num_chebs)
+
+    B[:, :d*(num_chebs-1)] = easy_B
+
+    # Create a tracker to keep track of indexes
+    curr_ind = d*(num_chebs - 1)
+
+    # Now we need to account for all the cross products
+    # We have the values we need hiding in B already.  No need to
+    # compute any more.  They are multiplications of different numbers
+    # of elements from the pieces of easy_B.
+
+    # Check for how high they can be valued
+
+    # Only mu of them can be at least 2 hence don't need to check more
+    for i in xrange(2, mu):
+
+        poss_vals = range(2, mu+1)
+
+        Check for indices that are the same
+        for val in poss_vals:
+            if val*i + d-i <= d+mu:
+                temp = np
+                for col in xrange(d):
+
+
+
+
+        # Check same types of indices as before
+        poss_inds = [el for el in combinations_with_replacement(poss_vals, i)
+                     if d < sum(el) <= d+mu]
+
+
+        # Need some kind of condition here to check when to stop
+        # If d + mu < 1*(d-i) + 2*i then it will be back to only one
+        # interesting element plus ones.  So stop if we get to that point
+        if d + mu < d-i + i*2:
+            break
+
+
+    return B
+
 
 
 ## ------------------ ##
