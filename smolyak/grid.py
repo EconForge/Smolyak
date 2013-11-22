@@ -540,12 +540,18 @@ def exp_B(d, mu, grid):
 
     # Check for how high they can be valued
 
+    # Will use this in loop, but creating outside so it doesn't get
+    # created multiple times
+    poss_vals = range(2, mu+1)
     # Only mu of them can be at least 2 hence don't need to check more
     for i in xrange(2, mu):
+        # Check same types of indices as before
+        poss_inds = [el for el in combinations_with_replacement(poss_vals, i)
+                     if d < sum(el) <= d+mu]
 
-        poss_vals = range(2, mu+1)
+        for inds in poss_inds:
 
-        Check for indices that are the same
+        # Check for indices that are the same
         for val in poss_vals:
             if val*i + d-i <= d+mu:
                 temp = np
@@ -553,10 +559,6 @@ def exp_B(d, mu, grid):
 
 
 
-
-        # Check same types of indices as before
-        poss_inds = [el for el in combinations_with_replacement(poss_vals, i)
-                     if d < sum(el) <= d+mu]
 
 
         # Need some kind of condition here to check when to stop
