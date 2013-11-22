@@ -543,30 +543,20 @@ def exp_B(d, mu, grid):
     # Will use this in loop, but creating outside so it doesn't get
     # created multiple times
     poss_vals = range(2, mu+1)
+
     # Only mu of them can be at least 2 hence don't need to check more
-    for i in xrange(2, mu):
+    for i in xrange(2, mu+1):
         # Check same types of indices as before
         poss_inds = [el for el in combinations_with_replacement(poss_vals, i)
-                     if d < sum(el) <= d+mu]
+                     if d < sum(el) <= (d-i)+mu]
 
-        for inds in poss_inds:
+        # for inds in poss_inds:
 
-        # Check for indices that are the same
-        for val in poss_vals:
-            if val*i + d-i <= d+mu:
-                temp = np
-                for col in xrange(d):
-
-
-
-
-
-        # Need some kind of condition here to check when to stop
-        # If d + mu < 1*(d-i) + 2*i then it will be back to only one
-        # interesting element plus ones.  So stop if we get to that point
-        if d + mu < d-i + i*2:
-            break
-
+        # # Check for indices that are the same
+        # for val in poss_vals:
+        #     if val*i + d-i <= d+mu:
+        #         temp = np
+        #         for col in xrange(d):
 
     return B
 
