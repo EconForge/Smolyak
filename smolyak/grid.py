@@ -141,8 +141,8 @@ def chebyvalto(x, n, kind=1.):
     ret_matrix[:, col:2*col] = 2 * x * ret_matrix[:, :col] - init
 
     for i in xrange(3, n):
-        ret_matrix[:, col*(i-1): col*(i)] = 2 * x * ret_matrix[:, col*(i-1):col*i] \
-                                         - ret_matrix[:, col*(i-2): col*(i-1)]
+        ret_matrix[:, col*(i-1): col*(i)] = 2 * x * ret_matrix[:, col*(i-2):col*(i-1)] \
+                                         - ret_matrix[:, col*(i-3): col*(i-2)]
 
     return ret_matrix
 
@@ -521,6 +521,7 @@ def exp_B(d, mu, grid):
     npts = grid.shape[0]
     num_chebs = m_i(mu + 1)
     max_ind = d + mu
+    aphi = phi_chain(mu + 1)
 
     B = np.ones((npts, npts))
 
@@ -532,31 +533,83 @@ def exp_B(d, mu, grid):
 
     # Create a tracker to keep track of indexes
     curr_ind = d*(num_chebs - 1)
+    # print(curr_ind)
 
     # Now we need to account for all the cross products
     # We have the values we need hiding in B already.  No need to
     # compute any more.  They are multiplications of different numbers
     # of elements from the pieces of easy_B.
 
+    # 2, 3
+    temp1 = easy_B[:, :d] * np.roll(easy_B[:, d+1: 2*d], 1)
+
+    # 3, 2
+    # temp2 = easy_B[:, d+1: 2*d] * np.roll(easy_B[:, :d], 1)
+
+    # 2, 2
+    temp3 = easy_B[:, :d] * np.roll(easy_B[:, :d], 1)
+
+    # 3, 3
+    temp4 = easy_B[:, d+1:2*d] * np.roll(easy_B[:, d+1: 2*d], 1)
+
+    # for i in xrange(d-1):
+    #     # 2, 3
+    #     temp1 = easy_B[:, i].reshape(npts, 1) * easy_B[:, d+(i+1): 2*d]
+
+    #     # 3, 2
+    #     temp2 = easy_B[:, i+d].reshape(npts, 1) * easy_B[:, i+1:d]
+
+    #     # 2, 2
+    #     temp3 = easy_B[:, i].reshape(npts, 1) * easy_B[:, i+1:d]
+
+    #     # 3, 3
+    #     temp4 = easy_B[:, i+d].reshape(npts, 1) * easy_B[:, d+(i+1): 2*d]
+
+
+    new_cols = temp1.shape[1] + temp3.shape[1] + temp4.shape[1]
+    print(curr_ind)
+    print(new_cols)
+    B[:, curr_ind: curr_ind + new_cols] = np.hstack([temp1, temp3, temp4])
+
+    curr_ind = curr_ind + new_cols
+
+
+
+    #-----------------------------------------------------------------#
+    #-----------------------------------------------------------------#
+    # This part will be the general section.  Above I am trying to
+    # make it work with just mu=2
+    #-----------------------------------------------------------------#
+    #-----------------------------------------------------------------#
     # Check for how high they can be valued
 
     # Will use this in loop, but creating outside so it doesn't get
     # created multiple times
-    poss_vals = range(2, mu+1)
+    # poss_vals = range(2, mu+1)
 
     # Only mu of them can be at least 2 hence don't need to check more
     for i in xrange(2, mu+1):
-        # Check same types of indices as before
-        poss_inds = [el for el in combinations_with_replacement(poss_vals, i)
-                     if d < sum(el) <= (d-i)+mu]
+        # Check same types of indices as before, but lower bound isn't
+        # relevant anymore.  And to check sum of indexes we are now
+        # concerned with being less than d - (d - i) + mu = i + mu
+        # poss_inds = [el for el in combinations_with_replacement(poss_vals, i)
+        #              if sum(el) <= i+mu]
 
-        # for inds in poss_inds:
+        to_check = 1
 
-        # # Check for indices that are the same
-        # for val in poss_vals:
-        #     if val*i + d-i <= d+mu:
-        #         temp = np
-        #         for col in xrange(d):
+        base_polys = []
+
+    #     for el in poss_inds:
+    #         temp = [aphi[i] for i in el]
+    #         # Save these indices that we iterate through because
+    #         # we need them for the chebychev polynomial combination
+    #         # inds.append(el)
+    #         base_polys.extend(list(product(*temp)))
+
+    #     for inds in base_polys:
+    #         temp = easy_B[]
+    #         B[curr_ind:curr_ind+temp.shape[1]]
+
 
     return B
 
