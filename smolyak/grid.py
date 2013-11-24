@@ -508,22 +508,17 @@ def build_B(d, mu, grid, inds=None):
 
     return B
 
+
 def exp_B(d, mu, grid):
     """
     write a nice doc string if it works
     """
-
-    if mu >= 2*d:
-        raise ValueError('If you are setting mu bigger than 2d then \
-                         you are basically on your own... If you are\
-                         in low dimensions use brute force B')
-
     npts = grid.shape[0]
     num_chebs = m_i(mu + 1)
     max_ind = d + mu
     aphi = phi_chain(mu + 1)
 
-    B = np.ones((npts, npts))
+    B = np.ones((npts, num_chebs))
 
     # These are simply all the values of phi_n (up to n=mu+1) where all
     # other indices on the phi are 1 (hence valued at 1)
@@ -540,36 +535,21 @@ def exp_B(d, mu, grid):
     # compute any more.  They are multiplications of different numbers
     # of elements from the pieces of easy_B.
 
-    # 2, 3
-    temp1 = easy_B[:, :d] * np.roll(easy_B[:, d+1: 2*d], 1)
-
-    # 3, 2
-    # temp2 = easy_B[:, d+1: 2*d] * np.roll(easy_B[:, :d], 1)
-
-    # 2, 2
-    temp3 = easy_B[:, :d] * np.roll(easy_B[:, :d], 1)
-
-    # 3, 3
-    temp4 = easy_B[:, d+1:2*d] * np.roll(easy_B[:, d+1: 2*d], 1)
-
-    # for i in xrange(d-1):
-    #     # 2, 3
-    #     temp1 = easy_B[:, i].reshape(npts, 1) * easy_B[:, d+(i+1): 2*d]
-
-    #     # 3, 2
-    #     temp2 = easy_B[:, i+d].reshape(npts, 1) * easy_B[:, i+1:d]
-
-    #     # 2, 2
-    #     temp3 = easy_B[:, i].reshape(npts, 1) * easy_B[:, i+1:d]
-
-    #     # 3, 3
-    #     temp4 = easy_B[:, i+d].reshape(npts, 1) * easy_B[:, d+(i+1): 2*d]
+    for i in xrange(d-1):
 
 
-    new_cols = temp1.shape[1] + temp3.shape[1] + temp4.shape[1]
-    print(curr_ind)
-    print(new_cols)
-    B[:, curr_ind: curr_ind + new_cols] = np.hstack([temp1, temp3, temp4])
+        mult_inds = np.hstack([np.arange(i+1, d), np.arange(d + (i+1), 2*d)])
+
+        temp1 = easy_B[:, i].reshape(npts, 1) * easy_B[:, mult_inds]
+        temp2 = temp2 = easy_B[:, i+d].reshape(npts, 1) * easy_B[:, mult_inds]
+
+
+    # new_cols = temp1.shape[1] + temp2.shape[1] + temp3.shape[1] + temp4.shape[1]
+    new_cols = temp1.shape[1] + temp2.shape[1]
+    # print(curr_ind)
+    # print(new_cols)
+    # B[:, curr_ind: curr_ind + new_cols] = np.hstack([temp1, temp2, temp3, temp4])
+    B[:, curr_ind: curr_ind + new_cols] = np.hstack([temp1, temp2])
 
     curr_ind = curr_ind + new_cols
 
@@ -581,23 +561,19 @@ def exp_B(d, mu, grid):
     # make it work with just mu=2
     #-----------------------------------------------------------------#
     #-----------------------------------------------------------------#
-    # Check for how high they can be valued
 
     # Will use this in loop, but creating outside so it doesn't get
     # created multiple times
     # poss_vals = range(2, mu+1)
 
     # Only mu of them can be at least 2 hence don't need to check more
-    for i in xrange(2, mu+1):
-        # Check same types of indices as before, but lower bound isn't
-        # relevant anymore.  And to check sum of indexes we are now
-        # concerned with being less than d - (d - i) + mu = i + mu
-        # poss_inds = [el for el in combinations_with_replacement(poss_vals, i)
-        #              if sum(el) <= i+mu]
+    # for i in xrange(2, mu+1):
+    #     # Check same types of indices as before, but lower bound isn't
+    #     # relevant anymore.  And to check sum of indexes we are now
+    #     # concerned with being less than d - (d - i) + mu = i + mu
+    #     curr_polys = aphi[i]
 
-        to_check = 1
-
-        base_polys = []
+    #     base_polys = []
 
     #     for el in poss_inds:
     #         temp = [aphi[i] for i in el]
