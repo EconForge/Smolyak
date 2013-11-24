@@ -518,7 +518,7 @@ def exp_B(d, mu, grid):
     max_ind = d + mu
     aphi = phi_chain(mu + 1)
 
-    B = np.ones((npts, num_chebs))
+    B = np.ones((npts, npts))
 
     # These are simply all the values of phi_n (up to n=mu+1) where all
     # other indices on the phi are 1 (hence valued at 1)
@@ -527,65 +527,74 @@ def exp_B(d, mu, grid):
     B[:, :d*(num_chebs-1)] = easy_B
 
     # Create a tracker to keep track of indexes
-    curr_ind = d*(num_chebs - 1)
-    # print(curr_ind)
+    B_col_mrk = d*(num_chebs - 1)
 
     # Now we need to account for all the cross products
     # We have the values we need hiding in B already.  No need to
     # compute any more.  They are multiplications of different numbers
     # of elements from the pieces of easy_B.
-
-    for i in xrange(d-1):
-
-
-        mult_inds = np.hstack([np.arange(i+1, d), np.arange(d + (i+1), 2*d)])
-
-        temp1 = easy_B[:, i].reshape(npts, 1) * easy_B[:, mult_inds]
-        temp2 = temp2 = easy_B[:, i+d].reshape(npts, 1) * easy_B[:, mult_inds]
+    if mu==2:
+        for i in xrange(d-1):
 
 
-    # new_cols = temp1.shape[1] + temp2.shape[1] + temp3.shape[1] + temp4.shape[1]
-    new_cols = temp1.shape[1] + temp2.shape[1]
-    # print(curr_ind)
-    # print(new_cols)
-    # B[:, curr_ind: curr_ind + new_cols] = np.hstack([temp1, temp2, temp3, temp4])
-    B[:, curr_ind: curr_ind + new_cols] = np.hstack([temp1, temp2])
+            mult_inds = np.hstack([np.arange(i+1, d), np.arange(d + (i+1), 2*d)])
 
-    curr_ind = curr_ind + new_cols
+            temp1 = easy_B[:, i].reshape(npts, 1) * easy_B[:, mult_inds]
+            temp2 = temp2 = easy_B[:, i+d].reshape(npts, 1) * easy_B[:, mult_inds]
 
+            new_cols = temp1.shape[1] + temp2.shape[1]
+            B[:, B_col_mrk: B_col_mrk + new_cols] = np.hstack([temp1, temp2])
+            B_col_mrk = B_col_mrk + new_cols
 
 
     #-----------------------------------------------------------------#
     #-----------------------------------------------------------------#
     # This part will be the general section.  Above I am trying to
     # make it work with just mu=2
+    # NOTE: Below this point the code is incomplete.  At best this is
+    # some general pseudo-code to write the generalization step.  Hoping
+    # to make it handle general cases.
     #-----------------------------------------------------------------#
     #-----------------------------------------------------------------#
 
-    # Will use this in loop, but creating outside so it doesn't get
-    # created multiple times
-    # poss_vals = range(2, mu+1)
+    for i in xrange(2, mu+1):
+        curr_ind = i
 
-    # Only mu of them can be at least 2 hence don't need to check more
-    # for i in xrange(2, mu+1):
-    #     # Check same types of indices as before, but lower bound isn't
-    #     # relevant anymore.  And to check sum of indexes we are now
-    #     # concerned with being less than d - (d - i) + mu = i + mu
-    #     curr_polys = aphi[i]
+        while True:
+            curr_dim = 2
+            curr_col = 0
 
-    #     base_polys = []
+            # Find which possible polynomials can be reached (lowest is 2)
+            poss_inds = np.arange(2, m_i(some function of curr_ind, d, mu)+1)
 
-    #     for el in poss_inds:
-    #         temp = [aphi[i] for i in el]
-    #         # Save these indices that we iterate through because
-    #         # we need them for the chebychev polynomial combination
-    #         # inds.append(el)
-    #         base_polys.extend(list(product(*temp)))
+            for dd in xrange(d-1):
+                # Create range of d to be used to build the fancy index
+                mult_ind = np.arange(curr_col+1, d)
 
-    #     for inds in base_polys:
-    #         temp = easy_B[]
-    #         B[curr_ind:curr_ind+temp.shape[1]]
+                # Initialize array for fancy index.  Want to add arange(d) + (d*i)
+                # for every chebyshev polynomial that we need to reach with these
+                # indexes
+                mult_inds = np.array([])
+                for tt in xrange(some condition for what is max polynomial we reach -1):
+                    mult_inds = np.hstack([mult_inds, mult_inds + (d*tt)])
 
+                # this will create the column times all the stuff following it
+                # in the other indexes
+                temp1 = easy_B[:, curr_col] * easy_B[:, mult_inds]
+
+                new_cols = temp1.shape[1]
+
+                B[:, B_col_mrk: B_col_mrk + new_cols] = temp1
+
+                while d>curr_dim and condition for continuing is met:
+                    curr_dim += 1
+                    for mm in xrange(curr_col + 2, d-1):
+                        for bb in mult_inds[:-1]:
+                            temp2 = easy_B[:, bb*d + mm] * temp1
+                            new_cols2 = temp2.shape[1]
+                            B[:, B_col_mrk: B_col_mrk + new_cols2]
+
+                # Need to continue code.  It is not done yet
 
     return B
 
