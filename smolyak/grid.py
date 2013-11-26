@@ -557,42 +557,42 @@ def exp_B(d, mu, grid):
     #-----------------------------------------------------------------#
     #-----------------------------------------------------------------#
 
-    for i in xrange(2, mu+1):
-        curr_ind = i
+    # for i in xrange(2, mu+1):
+    #     curr_ind = i
 
-        while True:
-            curr_dim = 2
-            curr_col = 0
+    #     while True:
+    #         curr_dim = 2
+    #         curr_col = 0
 
-            # Find which possible polynomials can be reached (lowest is 2)
-            poss_inds = np.arange(2, m_i(some function of curr_ind, d, mu)+1)
+    #         # Find which possible polynomials can be reached (lowest is 2)
+    #         poss_inds = np.arange(2, m_i(some function of curr_ind, d, mu)+1)
 
-            for dd in xrange(d-1):
-                # Create range of d to be used to build the fancy index
-                mult_ind = np.arange(curr_col+1, d)
+    #         for dd in xrange(d-1):
+    #             # Create range of d to be used to build the fancy index
+    #             mult_ind = np.arange(curr_col+1, d)
 
-                # Initialize array for fancy index.  Want to add arange(d) + (d*i)
-                # for every chebyshev polynomial that we need to reach with these
-                # indexes
-                mult_inds = np.array([])
-                for tt in xrange(some condition for what is max polynomial we reach -1):
-                    mult_inds = np.hstack([mult_inds, mult_inds + (d*tt)])
+    #             # Initialize array for fancy index.  Want to add arange(d) + (d*i)
+    #             # for every chebyshev polynomial that we need to reach with these
+    #             # indexes
+    #             mult_inds = np.array([])
+    #             for tt in xrange(some condition for what is max polynomial we reach -1):
+    #                 mult_inds = np.hstack([mult_inds, mult_inds + (d*tt)])
 
-                # this will create the column times all the stuff following it
-                # in the other indexes
-                temp1 = easy_B[:, curr_col] * easy_B[:, mult_inds]
+    #             # this will create the column times all the stuff following it
+    #             # in the other indexes
+    #             temp1 = easy_B[:, curr_col] * easy_B[:, mult_inds]
 
-                new_cols = temp1.shape[1]
+    #             new_cols = temp1.shape[1]
 
-                B[:, B_col_mrk: B_col_mrk + new_cols] = temp1
+    #             B[:, B_col_mrk: B_col_mrk + new_cols] = temp1
 
-                while d>curr_dim and condition for continuing is met:
-                    curr_dim += 1
-                    for mm in xrange(curr_col + 2, d-1):
-                        for bb in mult_inds[:-1]:
-                            temp2 = easy_B[:, bb*d + mm] * temp1
-                            new_cols2 = temp2.shape[1]
-                            B[:, B_col_mrk: B_col_mrk + new_cols2]
+    #             while d>curr_dim and condition for continuing is met:
+    #                 curr_dim += 1
+    #                 for mm in xrange(curr_col + 2, d-1):
+    #                     for bb in mult_inds[:-1]:
+    #                         temp2 = easy_B[:, bb*d + mm] * temp1
+    #                         new_cols2 = temp2.shape[1]
+    #                         B[:, B_col_mrk: B_col_mrk + new_cols2]
 
                 # Need to continue code.  It is not done yet
 
