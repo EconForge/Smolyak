@@ -1,4 +1,5 @@
-pandas>=0.12.0
-numpy>=1.7
-scipy>=0.12
-matplotlib>=1.3
+pandas
+numpy
+scipy
+matplotlib
+ipython

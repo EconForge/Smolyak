@@ -4,6 +4,9 @@ Julia:
   ☐ Non [-1, 1]^d grids/routines (see dolo)
   Ideas:
     ☐ I noticed that for (40, 2) there are 10764961 points in B, but only 3090461 are non-zero. That is only 28.7085%. Maybe we should use sparse matrices. We should do some testing to see if that would help. @spencer @started(13-11-08 01:34)
+  Speed Improvements:
+   ☐Try to use the inbounds macro to speed up indexing -- this eliminates bounds checking @spencer 2013-11-21 10:26
+   ☐ This is big re-write, but write things in column-major form. This should indexing quite a bit more efficient
 
 Python:
  ☐ Interpolation Routines
