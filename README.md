@@ -1,6 +1,6 @@
 # Smolyak
 
-[![Build Status](https://travis-ci.org/EconForge/Smolyak.jl.png)](https://travis-ci.org/EconForge/Smolyak.jl)
+[![Build Status](https://travis-ci.org/EconForge/Smolyak.png)](https://travis-ci.org/EconForge/Smolyak)
 
 Efficient implementations of Smolyak's algorithm for function approxmation in Python and Julia.
 
