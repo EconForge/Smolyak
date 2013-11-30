@@ -23,11 +23,9 @@ Krueger, Dirk, and Felix Kubler. 2004. "Computing Equilibrium in OLG
     Control 28 (7) (April): 1411-1436.
 
 """
-using Iterators
-using Cartesian
 import PyPlot
-require("util")
 import Base.show
+require("util")
 
 ## --------------- ##
 #- Building Blocks -#
@@ -133,8 +131,8 @@ function cheby2n{T<:Number}(x::Array{T, 1}, n::Int; kind::Real=1)
 
     """
 
-    dim = length(x)
-    results = Array(T, dim, n + 1)
+    dim = length(x)::Int64
+    results = Array(T, dim, n + 1)::Array{Float64, 2}
     results[:, 1] = 1.
     results[:, 2] = kind * x
     for i=3:n+1
@@ -491,12 +489,17 @@ function build_B(d::Int, mu::IntSorV, grid::Array{Float64, 2},
         inds = smol_inds(d, mu)
     end
 
-    Ts = cheby2n(grid, m_i(maximum(mu) + 1))
-    b_inds = poly_inds(d, mu, inds)
-    n = size(grid, 1)
-    B = Array(Float64, n, n)
+    Ts = cheby2n(grid, m_i(maximum(mu) + 1))::Array{Float64, 3}
+    b_inds = poly_inds(d, mu, inds)::Array{Int64, 2}
+    n = size(grid, 1)::Int64
+    B = ones(n, n)::Array{Float64, 2}
     for ind = 1:n
-        B[:, ind] = reduce(.*, {slice(Ts, :, k, b_inds[ind, k]) for k=1:d})
+        for k in 1:d
+            b = b_inds[ind,k]::Int64
+            for i in 1:n
+                @inbounds B[i,ind] *= Ts[i, k, b]
+            end
+        end
     end
     return B
 end
@@ -570,7 +573,7 @@ function show(io::IO, sg::SmolyakGrid)
     "show method for SmolyakGrid type"
     npoints = size(sg.grid, 1)
     non_zero_pts = nnz(sg.B)
-    pct_non_zero = non_zero_pts / (npoints ^ 2)
+    pct_non_zero = (non_zero_pts / (npoints ^ 2)) * 100
     if isa(sg.mu, Array)
         mu_str = replace(strip(string(sg.mu)), '\n', " x ")
         msg = "Anisotropic Smolyak Grid:\n"
