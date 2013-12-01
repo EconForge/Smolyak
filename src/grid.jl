@@ -25,7 +25,7 @@ Krueger, Dirk, and Felix Kubler. 2004. "Computing Equilibrium in OLG
 """
 import PyPlot
 import Base.show
-require("util")
+require("../src/util")
 
 ## --------------- ##
 #- Building Blocks -#
@@ -460,7 +460,9 @@ function build_B(d::Int, mu::IntSorV, grid::Array{Float64, 2},
                  inds::Array{Any}={})
     """
     Compute the matrix B from equation 22 in JMMV 2013
-    Translation of dolo.numeric.interpolation.smolyak.SmolyakBasic
+
+    Optimized translation of
+    `dolo.numeric.interpolation.smolyak.SmolyakBasic`
 
     Parameters
     ----------
@@ -505,6 +507,58 @@ function build_B(d::Int, mu::IntSorV, grid::Array{Float64, 2},
 end
 
 
+# Build B-matrix
+function build_B(d::Int, mu::IntSorV, pts::Array{Float64, 2},
+                 b_inds::Array{Int64, 2})
+    """
+    Given polynomial indices, construct the matrix B from equation
+    22 in JMMV 2013
+
+    Optimized translation of
+    `dolo.numeric.interpolation.smolyak.SmolyakBasic`
+
+    Parameters
+    ----------
+    d : int
+        The number of dimensions on the grid
+
+    mu : int or array (int, ndim=1, legnth=d)
+        The mu parameter used to define grid
+
+    pts : array (float, dims=2)
+        Arbitrary d-dimensional points. Each row is assumed to be a new
+        point. Often this is the smolyak grid returned by calling
+        `build_grid(d, mu)`
+
+    b_inds : array (int, ndim=2)
+        The polynomial indices for parameters a given grid. These should
+        be  computed by calling `poly_inds(d, mu)`.
+
+    Returns
+    -------
+    B : array (float, 2)
+        If `pts` is a Smolyak grid, then this is the matrix B
+        representing  the Smolyak polynomial for the grid. If `pts` is
+        not a Smolyak grid, then this is each Smolyak polynomial
+        evaluated at each point in pts.
+
+    """
+    Ts = cheby2n(pts, m_i(maximum(mu) + 1))::Array{Float64, 3}
+    npolys = size(b_inds, 1)::Int64
+    npts = size(pts, 1)::Int64
+    B = ones(npts, npolys)::Array{Float64, 2}
+    for ind = 1:npolys
+        for k in 1:d
+            b = b_inds[ind,k]::Int64
+            for i in 1:npts
+                @inbounds B[i,ind] *= Ts[i, k, b]
+            end
+        end
+    end
+    return B
+end
+
+
 ## ----------------- ##
 #- Type: SmolyakGrid -#
 ## ----------------- ##
@@ -516,6 +570,7 @@ type SmolyakGrid
     mu::IntSorV  # density. Int or d element vector of Int
     grid::Matrix{Float64}  # Smolyak grid
     inds::Array{Any, 1}  # Smolyak indices
+    pinds::Matrix{Int64}  # Polynomial indices
     B::Matrix{Float64}  # matrix representing interpoland
     B_L::Matrix{Float64}  # L from LU decomposition of B
     B_U::Matrix{Float64}  # U from LU decomposition of B
@@ -530,13 +585,14 @@ type SmolyakGrid
         end
 
         inds = smol_inds(d, mu)
+        pinds = poly_inds(d, mu, inds)
         grid = build_grid(d, mu, inds)
-        B = build_B(d, mu, grid, inds)
+        B = build_B(d, mu, grid, pinds)
         lu_B = lu(B)
         B_L = lu_B[1]
         B_U = lu_B[2]
 
-        new(d, mu, grid, inds, B, B_L, B_U)
+        new(d, mu, grid, inds, pinds, B, B_L, B_U)
     end
 
     # Anisotropic constructor
@@ -553,18 +609,19 @@ type SmolyakGrid
         end
 
         inds = smol_inds(d, mu)
+        pinds = poly_inds(d, mu, inds)
         grid = build_grid(d, mu, inds)
-        B = build_B(d, mu, grid, inds)
+        B = build_B(d, mu, grid, pinds)
         lu_B = lu(B)
         B_L = lu_B[1]
         B_U = lu_B[2]
 
-        new(d, mu, grid, inds, B, B_L, B_U)
+        new(d, mu, grid, inds, pinds, B, B_L, B_U)
     end
 
     # Default constructor, just in case someone gets brave
-    function SmolyakGrid(d, mu, grid, inds, B, B_L, B_U)
-        new(d, mu, grid, inds, B, B_L, B_U)
+    function SmolyakGrid(d, mu, grid, inds, pinds, B, B_L, B_U)
+        new(d, mu, grid, inds, pinds, B, B_L, B_U)
     end
 end
 
