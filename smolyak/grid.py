@@ -511,94 +511,94 @@ def build_B(d, mu, pts, b_inds=None):
     return B
 
 
-def exp_B(d, mu, grid):
-    """
-    write a nice doc string if it works
-    """
-    npts = grid.shape[0]
-    num_chebs = m_i(mu + 1)
-    max_ind = d + mu
-    aphi = phi_chain(mu + 1)
+# def exp_B(d, mu, grid):
+#     """
+#     write a nice doc string if it works
+#     """
+#     npts = grid.shape[0]
+#     num_chebs = m_i(mu + 1)
+#     max_ind = d + mu
+#     aphi = phi_chain(mu + 1)
 
-    B = np.ones((npts, npts))
+#     B = np.ones((npts, npts))
 
-    # These are simply all the values of phi_n (up to n=mu+1) where all
-    # other indices on the phi are 1 (hence valued at 1)
-    easy_B = chebyvalto(grid, num_chebs)
+#     # These are simply all the values of phi_n (up to n=mu+1) where all
+#     # other indices on the phi are 1 (hence valued at 1)
+#     easy_B = chebyvalto(grid, num_chebs)
 
-    B[:, :d*(num_chebs-1)] = easy_B
+#     B[:, :d*(num_chebs-1)] = easy_B
 
-    # Create a tracker to keep track of indexes
-    B_col_mrk = d*(num_chebs - 1)
+#     # Create a tracker to keep track of indexes
+#     B_col_mrk = d*(num_chebs - 1)
 
-    # Now we need to account for all the cross products
-    # We have the values we need hiding in B already.  No need to
-    # compute any more.  They are multiplications of different numbers
-    # of elements from the pieces of easy_B.
-    if mu==2:
-        for i in xrange(d-1):
-
-
-            mult_inds = np.hstack([np.arange(i+1, d), np.arange(d + (i+1), 2*d)])
-
-            temp1 = easy_B[:, i].reshape(npts, 1) * easy_B[:, mult_inds]
-            temp2 = temp2 = easy_B[:, i+d].reshape(npts, 1) * easy_B[:, mult_inds]
-
-            new_cols = temp1.shape[1] + temp2.shape[1]
-            B[:, B_col_mrk: B_col_mrk + new_cols] = np.hstack([temp1, temp2])
-            B_col_mrk = B_col_mrk + new_cols
+#     # Now we need to account for all the cross products
+#     # We have the values we need hiding in B already.  No need to
+#     # compute any more.  They are multiplications of different numbers
+#     # of elements from the pieces of easy_B.
+#     if mu==2:
+#         for i in xrange(d-1):
 
 
-    #-----------------------------------------------------------------#
-    #-----------------------------------------------------------------#
-    # This part will be the general section.  Above I am trying to
-    # make it work with just mu=2
-    # NOTE: Below this point the code is incomplete.  At best this is
-    # some general pseudo-code to write the generalization step.  Hoping
-    # to make it handle general cases.
-    #-----------------------------------------------------------------#
-    #-----------------------------------------------------------------#
+#             mult_inds = np.hstack([np.arange(i+1, d), np.arange(d + (i+1), 2*d)])
 
-    # for i in xrange(2, mu+1):
-    #     curr_ind = i
+#             temp1 = easy_B[:, i].reshape(npts, 1) * easy_B[:, mult_inds]
+#             temp2 = temp2 = easy_B[:, i+d].reshape(npts, 1) * easy_B[:, mult_inds]
 
-    #     while True:
-    #         curr_dim = 2
-    #         curr_col = 0
+#             new_cols = temp1.shape[1] + temp2.shape[1]
+#             B[:, B_col_mrk: B_col_mrk + new_cols] = np.hstack([temp1, temp2])
+#             B_col_mrk = B_col_mrk + new_cols
 
-    #         # Find which possible polynomials can be reached (lowest is 2)
-    #         poss_inds = np.arange(2, m_i(some function of curr_ind, d, mu)+1)
 
-    #         for dd in xrange(d-1):
-    #             # Create range of d to be used to build the fancy index
-    #             mult_ind = np.arange(curr_col+1, d)
+#     #-----------------------------------------------------------------#
+#     #-----------------------------------------------------------------#
+#     # This part will be the general section.  Above I am trying to
+#     # make it work with just mu=2
+#     # NOTE: Below this point the code is incomplete.  At best this is
+#     # some general pseudo-code to write the generalization step.  Hoping
+#     # to make it handle general cases.
+#     #-----------------------------------------------------------------#
+#     #-----------------------------------------------------------------#
 
-    #             # Initialize array for fancy index.  Want to add arange(d) + (d*i)
-    #             # for every chebyshev polynomial that we need to reach with these
-    #             # indexes
-    #             mult_inds = np.array([])
-    #             for tt in xrange(some condition for what is max polynomial we reach -1):
-    #                 mult_inds = np.hstack([mult_inds, mult_inds + (d*tt)])
+#     # for i in xrange(2, mu+1):
+#     #     curr_ind = i
 
-    #             # this will create the column times all the stuff following it
-    #             # in the other indexes
-    #             temp1 = easy_B[:, curr_col] * easy_B[:, mult_inds]
+#     #     while True:
+#     #         curr_dim = 2
+#     #         curr_col = 0
 
-    #             new_cols = temp1.shape[1]
+#     #         # Find which possible polynomials can be reached (lowest is 2)
+#     #         poss_inds = np.arange(2, m_i(some function of curr_ind, d, mu)+1)
 
-    #             B[:, B_col_mrk: B_col_mrk + new_cols] = temp1
+#     #         for dd in xrange(d-1):
+#     #             # Create range of d to be used to build the fancy index
+#     #             mult_ind = np.arange(curr_col+1, d)
 
-    #             while d>curr_dim and condition for continuing is met:
-    #                 curr_dim += 1
-    #                 for mm in xrange(curr_col + 2, d-1):
-    #                     for bb in mult_inds[:-1]:
-    #                         temp2 = easy_B[:, bb*d + mm] * temp1
-    #                         new_cols2 = temp2.shape[1]
-    #                         B[:, B_col_mrk: B_col_mrk + new_cols2]
+#     #             # Initialize array for fancy index.  Want to add arange(d) + (d*i)
+#     #             # for every chebyshev polynomial that we need to reach with these
+#     #             # indexes
+#     #             mult_inds = np.array([])
+#     #             for tt in xrange(some condition for what is max polynomial we reach -1):
+#     #                 mult_inds = np.hstack([mult_inds, mult_inds + (d*tt)])
 
-                # Need to continue code.  It is not done yet
+#     #             # this will create the column times all the stuff following it
+#     #             # in the other indexes
+#     #             temp1 = easy_B[:, curr_col] * easy_B[:, mult_inds]
 
-    return B
+#     #             new_cols = temp1.shape[1]
+
+#     #             B[:, B_col_mrk: B_col_mrk + new_cols] = temp1
+
+#     #             while d>curr_dim and condition for continuing is met:
+#     #                 curr_dim += 1
+#     #                 for mm in xrange(curr_col + 2, d-1):
+#     #                     for bb in mult_inds[:-1]:
+#     #                         temp2 = easy_B[:, bb*d + mm] * temp1
+#     #                         new_cols2 = temp2.shape[1]
+#     #                         B[:, B_col_mrk: B_col_mrk + new_cols2]
+
+#                 # Need to continue code.  It is not done yet
+
+#     return B
 
 
 
@@ -629,6 +629,12 @@ class SmolyakGrid(object):
     mu : int
         mu is a parameter that defines the fineness of grid that we
         want to build
+
+    low_bounds : array (float, ndim=2)
+        This is an array of the lower bounds for each dimension
+
+    up_bounds : array (float, ndim=2)
+        This is an array of the upper bounds for each dimension
 
     grid : array (float, ndim=2)
         This is the sparse grid that we need to build
@@ -663,8 +669,10 @@ class SmolyakGrid(object):
         B: 0.68% non-zero
 
     """
-    def __init__(self, d, mu):
+    def __init__(self, d, mu, low_bounds, up_bounds):
         self.d = d
+        self.low_bounds = low_bounds
+        self.up_bounds = up_bounds
 
         if d <= 1:
             raise ValueError('Number of dimensions must be >= 2')
@@ -717,6 +725,44 @@ class SmolyakGrid(object):
 
     def __str__(self):
         return self.__repr__()
+
+    def trans_points(pts):
+        """
+        Takes a point(s) and transforms it(them) into the [-1, 1]^d domain
+        """
+        # Could add some bounds checks to make sure points are in the
+        # correct domain (between low and up bounds) and if right dim
+
+        dim = self.d
+        low_bounds = self.low_bounds
+        up_bounds = self.up_bounds
+
+        centers = low_bounds + (up_bounds - low_bounds)/2
+        radii = (up_bounds - low_bounds)/2
+
+        trans_pts = (pts-centers)/radii
+
+        return trans_pts
+
+
+    def inv_trans_points(pts):
+        """
+        Takes a point(s) and transforms it(them) back into the desired
+        domain
+        """
+        # Also could use some bounds checks/other stuff to make sure
+        # that everything being passed in is viable
+
+        dim = self.d
+        low_bounds = self.low_bounds
+        up_bounds = self.up_bounds
+
+        centers = low_bounds + (up_bounds - low_bounds)/2
+        radii = (up_bounds - low_bounds)/2
+
+        inv_trans_pts = pts*radii + centers
+
+        return inv_trans_pts
 
     def plot_grid(self):
         """
