@@ -462,7 +462,7 @@ def build_grid(d, mu, inds=None):
     return grid
 
 
-def build_B(d, mu, grid, inds=None):
+def build_B(d, mu, pts, b_inds=None):
     """
     Compute the matrix B from equation 22 in JMMV 2013
     Translation of dolo.numeric.interpolation.smolyak.SmolyakBasic
@@ -475,13 +475,14 @@ def build_B(d, mu, grid, inds=None):
     mu : int or array (int, ndim=1, legnth=d)
         The mu parameter used to define grid
 
-    grid : array (float, dims=2)
-        The smolyak grid returned by calling `build_grid(d, mu)`
+    pts : array (float, dims=2)
+        Arbitrary d-dimensional points. Each row is assumed to be a new
+        point. Often this is the smolyak grid returned by calling
+        `build_grid(d, mu)`
 
-    inds : list (list (int)), optional (default=None)
-        The Smolyak indices for parameters d and mu. Should be computed
-        by calling `smol_inds(d, mu)`. If None is given, the indices
-        are computed using this function call
+    b_inds : array (int, ndim=2)
+        The polynomial indices for parameters a given grid. These should
+        be  computed by calling `poly_inds(d, mu)`.
 
     Returns
     -------
@@ -490,19 +491,20 @@ def build_B(d, mu, grid, inds=None):
         corresponding to grid
 
     """
-    if inds is None:
+    if b_inds is None:
         inds = smol_inds(d, mu)
+        b_inds = poly_inds(d, mu, inds)
 
     if isinstance(mu, int):
         max_mu = mu
     else:
         max_mu = max(mu)
 
-    Ts = cheby2n(grid.T, m_i(max_mu + 1))
-    base_polys = poly_inds(d, mu, inds)
-    n = len(grid)
-    B = np.empty((n, n), order='F')
-    for ind, comb in enumerate(base_polys):
+    Ts = cheby2n(pts.T, m_i(max_mu + 1))
+    npolys = len(b_inds)
+    npts = pts.shape[0]
+    B = np.empty((npts, npolys), order='F')
+    for ind, comb in enumerate(b_inds):
         B[:, ind] = reduce(mul, [Ts[comb[i] - 1, i, :]
                            for i in range(d)])
 
@@ -673,8 +675,9 @@ class SmolyakGrid(object):
 
             self.mu = mu
             self.inds = smol_inds(d, mu)
+            self.pinds = poly_inds(d, mu, inds=self.inds)
             self.grid = build_grid(self.d, self.mu, self.inds)
-            self.B = build_B(self.d, self.mu, self.grid, self.inds)
+            self.B = build_B(self.d, self.mu, self.grid, self.pinds)
 
         else:  # Anisotropic case
             mu = np.asarray(mu)
@@ -687,8 +690,9 @@ class SmolyakGrid(object):
 
             self.mu = mu
             self.inds = smol_inds(d, mu)
+            self.pinds = poly_inds(d, mu, inds=self.inds)
             self.grid = build_grid(self.d, self.mu, self.inds)
-            self.B = build_B(self.d, self.mu, self.grid, self.inds)
+            self.B = build_B(self.d, self.mu, self.grid, self.pinds)
 
         # Compute LU decomposition of B
         l, u = lu(self.B, True)  # pass permute_l as true. See scipy docs
