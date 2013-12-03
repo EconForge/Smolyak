@@ -72,7 +72,7 @@ class SmolyakInterp(object):
         # Move points to correct domain
         trans_points = sg.trans_points(pts)
 
-        new_B = build_B(d, sg.mu, pts, sg.pinds)
+        new_B = build_B(d, sg.mu, trans_points, sg.pinds)
         vals = new_B.dot(theta)
         return vals
 

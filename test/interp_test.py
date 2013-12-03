@@ -9,16 +9,16 @@ func = lambda x, y: np.exp(x**2 - y**2)
 func1 = lambda points: func(points[:, 0], points[:, 1])
 
 def test_interp_2d(d, mu, f):
-    sg = SmolyakGrid(d, mu, np.array([-1, -1]), np.array([1, 1]))
+    sg = SmolyakGrid(d, mu, np.array([-2, -2.]), np.array([2., 2.]))
 
-    f_on_grid = f(sg.grid)
+    f_on_grid = f(sg.org_grid)
 
     si = SmolyakInterp(sg, f_on_grid)
 
     np.random.seed(42)
     test_points = np.random.randn(100, 2)
-    # Make sure it is bounded by -1, 1
-    test_points = test_points/np.max(np.abs(test_points))
+    # Make sure it is bounded by -2, 2
+    test_points = 2*test_points/np.max(np.abs(test_points))
 
     true_vals = f(test_points)
     interp_vals = si.interpolate(test_points)
