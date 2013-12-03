@@ -685,6 +685,7 @@ class SmolyakGrid(object):
             self.inds = smol_inds(d, mu)
             self.pinds = poly_inds(d, mu, inds=self.inds)
             self.grid = build_grid(self.d, self.mu, self.inds)
+            self.org_grid = self.inv_trans_points(self.grid)
             self.B = build_B(self.d, self.mu, self.grid, self.pinds)
 
         else:  # Anisotropic case
@@ -700,6 +701,7 @@ class SmolyakGrid(object):
             self.inds = smol_inds(d, mu)
             self.pinds = poly_inds(d, mu, inds=self.inds)
             self.grid = build_grid(self.d, self.mu, self.inds)
+            self.org_grid = self.inv_trans_points(self.grid)
             self.B = build_B(self.d, self.mu, self.grid, self.pinds)
 
         # Compute LU decomposition of B
@@ -746,8 +748,8 @@ class SmolyakGrid(object):
 
     def inv_trans_points(self, pts):
         """
-        Takes a point(s) and transforms it(them) back into the desired
-        domain
+        Takes a point(s) and transforms it(them) from domain [-1, 1]^d
+        back into the desired domain
         """
         # Also could use some bounds checks/other stuff to make sure
         # that everything being passed in is viable
