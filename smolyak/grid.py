@@ -726,7 +726,7 @@ class SmolyakGrid(object):
     def __str__(self):
         return self.__repr__()
 
-    def trans_points(pts):
+    def trans_points(self, pts):
         """
         Takes a point(s) and transforms it(them) into the [-1, 1]^d domain
         """
@@ -744,8 +744,7 @@ class SmolyakGrid(object):
 
         return trans_pts
 
-
-    def inv_trans_points(pts):
+    def inv_trans_points(self, pts):
         """
         Takes a point(s) and transforms it(them) back into the desired
         domain
