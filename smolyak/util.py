@@ -1,5 +1,7 @@
 import numpy as np
 
+__all__ = ['permute']
+
 
 def permute(a):
     """

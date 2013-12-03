@@ -38,6 +38,11 @@ from util import *
 #- Building Blocks -#
 ## --------------- ##
 
+__all__ = ['num_grid_points', 'm_i', 'cheby2n', 's_n', 'a_chain', 'phi_chain',
+            'smol_inds', 'build_grid', 'build_B', 'SmolyakGrid']
+
+
+
 
 def num_grid_points(d, mu):
     """
@@ -527,7 +532,6 @@ def build_B(d, mu, pts, b_inds=None, deriv=False):
         der_B = np.zeros((npolys, d, npts))
 
         for i in range(d):
-            el = []
             for ind, comb in enumerate(b_inds):
                 der_B[ind, i, :] = reduce(mul, [(Ts[comb[k] - 1, k, :] if i != k
                                           else Us[comb[k] - 1, k, :])
@@ -665,8 +669,12 @@ class SmolyakGrid(object):
     ub : array (float, ndim=2)
         This is an array of the upper bounds for each dimension
 
-    grid : array (float, ndim=2)
-        This is the sparse grid that we need to build
+    cube_grid : array (float, ndim=2)
+        The Smolyak sparse grid on the domain :math:`[-1, 1]^d`
+
+    grid: : array (float, ndim=2)
+        The sparse grid, transformed to the user-specified bounds for
+        the domain
 
     inds : list (list (int))
         This is a lists of lists that contains all of the indices
@@ -735,9 +743,9 @@ class SmolyakGrid(object):
             self.mu = mu
             self.inds = smol_inds(d, mu)
             self.pinds = poly_inds(d, mu, inds=self.inds)
-            self.grid = build_grid(self.d, self.mu, self.inds)
-            self.org_grid = self.cube2dom(self.grid)
-            self.B = build_B(self.d, self.mu, self.grid, self.pinds)
+            self.cube_grid = build_grid(self.d, self.mu, self.inds)
+            self.grid = self.cube2dom(self.cube_grid)
+            self.B = build_B(self.d, self.mu, self.cube_grid, self.pinds)
 
         else:  # Anisotropic case
             mu = np.asarray(mu)
@@ -751,9 +759,9 @@ class SmolyakGrid(object):
             self.mu = mu
             self.inds = smol_inds(d, mu)
             self.pinds = poly_inds(d, mu, inds=self.inds)
-            self.grid = build_grid(self.d, self.mu, self.inds)
-            self.org_grid = self.cube2dom(self.grid)
-            self.B = build_B(self.d, self.mu, self.grid, self.pinds)
+            self.cube_grid = build_grid(self.d, self.mu, self.inds)
+            self.grid = self.cube2dom(self.cube_grid)
+            self.B = build_B(self.d, self.mu, self.cube_grid, self.pinds)
 
         # Compute LU decomposition of B
         l, u = lu(self.B, True)  # pass permute_l as true. See scipy docs
@@ -761,20 +769,20 @@ class SmolyakGrid(object):
         self.B_U = u
 
     def __repr__(self):
-        npoints = self.grid.shape[0]
+        npoints = self.cube_grid.shape[0]
         nz_pts = np.count_nonzero(self.B)
         pct_nz = nz_pts / (npoints ** 2.)
 
         if isinstance(self.mu, int):
             msg = "Smolyak Grid:\n\td: {0} \n\tmu: {1} \n\tnpoints: {2}"
             msg += "\n\tB: {3:.2f}% non-zero"
-            return msg.format(self.d, self.mu, self.grid.shape[0], pct_nz)
+            return msg.format(self.d, self.mu, self.cube_grid.shape[0], pct_nz)
         else:  # Anisotropic grid
             msg = "Anisotropic Smolyak Grid:"
             msg += "\n\td: {0} \n\tmu: {1} \n\tnpoints: {2}"
             msg += "\n\tB: {3:.2f}% non-zero"
             mu_str = " x ".join(map(str, self.mu))
-            return msg.format(self.d, mu_str, self.grid.shape[0], pct_nz)
+            return msg.format(self.d, mu_str, self.cube_grid.shape[0], pct_nz)
 
     def __str__(self):
         return self.__repr__()
@@ -833,8 +841,11 @@ class SmolyakGrid(object):
             ys = grid[:, 1]
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            ax.scatter(xs, ys)
-            ax.grid(True, linestyle='--', color='0.75')
+            ax.set_xlim(xs.min() - .5, xs.max() + .5)
+            ax.set_ylim(ys.min() - .5, ys.max() + .5)
+            ax.plot(xs, ys, '.', markersize=6)
+            ax.set_title("Smolyak grid: $d=%i, \; \\mu=%i$" % (self.d,
+                                                               self.mu))
             plt.show()
         elif grid.shape[1] == 3:
             xs = grid[:, 0]
@@ -843,7 +854,10 @@ class SmolyakGrid(object):
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d')
             ax.scatter(xs, ys, zs)
-            ax.grid(True, linestyle='--', color='0.75')
+            ax.set_title("Smolyak grid: $d=%i, \; \\mu=%i$" % (self.d,
+                                                               self.mu))
             plt.show()
         else:
             raise ValueError('Can only plot 2 or 3 dimensional problems')
+
+        return fig

@@ -9,6 +9,8 @@ import numpy as np
 import numpy.linalg as la
 from grid import *
 
+__all__ = ['find_theta', 'SmolyakInterp']
+
 
 def find_theta(sg, f_on_grid):
     """
@@ -101,7 +103,7 @@ class SmolyakInterp(object):
 
             if interp:
                 rets.append(vals)
-            rets.append(d_vals)
+            rets.append(sg.dom2cube(d_vals))
 
         elif not deriv and interp:  # Don't compute derivs in build_B. Just do vals
             new_B = build_B(d, sg.mu, trans_points, sg.pinds)
@@ -125,28 +127,28 @@ class SmolyakInterp(object):
         return rets
 
 
-if __name__ == '__main__':
-    d = 2
-    mu = 3
-    f = lambda x: np.sum(x ** 2, axis=1)
-    f_prime = lambda x: 2 * x
-    sg = SmolyakGrid(d, mu, np.array([-1, -1.]), np.array([1., 1.]))
+# if __name__ == '__main__':
+#     d = 2
+#     mu = 3
+#     f = lambda x: np.sum(x ** 2, axis=1)
+#     f_prime = lambda x: 2 * x
+#     sg = SmolyakGrid(d, mu, np.array([-1, -1.]), np.array([1., 1.]))
 
-    f_on_grid = f(sg.org_grid)
+#     f_on_grid = f(sg.grid)
 
-    si = SmolyakInterp(sg, f_on_grid)
+#     si = SmolyakInterp(sg, f_on_grid)
 
-    np.random.seed(42)
-    test_points = np.random.randn(100, 2)
-    # Make sure it is bounded by -2, 2
-    test_points = test_points/np.max(np.abs(test_points))
+#     np.random.seed(42)
+#     test_points = np.random.randn(100, 2)
+#     # Make sure it is bounded by -2, 2
+#     test_points = test_points/np.max(np.abs(test_points))
 
-    true_vals = f(test_points)
-    interp_vals = si.interpolate(test_points)
+#     true_vals = f(test_points)
+#     interp_vals = si.interpolate(test_points)
 
-    mean_ad = np.mean(np.abs(interp_vals - true_vals))
-    max_ad = np.max(np.abs(interp_vals - true_vals))
-    min_ad = np.min(np.abs(interp_vals - true_vals))
+#     mean_ad = np.mean(np.abs(interp_vals - true_vals))
+#     max_ad = np.max(np.abs(interp_vals - true_vals))
+#     min_ad = np.min(np.abs(interp_vals - true_vals))
 
-    print("The mean abs diff is {}\nThe max abs diff is {}\nThe min abs diff is {}"
-          .format(mean_ad, max_ad, min_ad))
+#     print("The mean abs diff is {}\nThe max abs diff is {}\nThe min abs diff is {}"
+#           .format(mean_ad, max_ad, min_ad))
