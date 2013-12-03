@@ -462,7 +462,7 @@ def build_grid(d, mu, inds=None):
     return grid
 
 
-def build_B(d, mu, pts, b_inds=None):
+def build_B(d, mu, pts, b_inds=None, deriv=False):
     """
     Compute the matrix B from equation 22 in JMMV 2013
     Translation of dolo.numeric.interpolation.smolyak.SmolyakBasic
@@ -483,6 +483,10 @@ def build_B(d, mu, pts, b_inds=None):
     b_inds : array (int, ndim=2)
         The polynomial indices for parameters a given grid. These should
         be  computed by calling `poly_inds(d, mu)`.
+
+    deriv : bool
+        Whether or not to compute the values needed for the derivative matrix
+        B.
 
     Returns
     -------
@@ -507,6 +511,27 @@ def build_B(d, mu, pts, b_inds=None):
     for ind, comb in enumerate(b_inds):
         B[:, ind] = reduce(mul, [Ts[comb[i] - 1, i, :]
                            for i in range(d)])
+
+    if deriv:
+        # TODO: test this. I am going to bed.
+        Us = cheby2n(pts.T, m_i(max_mu + 1), kind=2.0)
+        Us = np.concatenate([np.zeros((1, d, npts)), Us], axis=0)
+        for i in range(Us.shape[0]):
+            Us[i, :, :] = Us[i, :, :] * i
+
+        der_B = np.zeros((npolys, d, npts))
+        import ipdb; ipdb.set_trace()
+
+        for i in range(d):
+            el = []
+            for ind, comb in enumerate(b_inds):
+                der_B[ind, i, :] = reduce(mul, [(Ts[comb[k] - 1, k, :] if i != k
+                                          else Us[comb[k] - 1, k, :])
+                                          for k in range(d)])
+
+        return B, der_B
+
+
 
     return B
 
@@ -630,10 +655,10 @@ class SmolyakGrid(object):
         mu is a parameter that defines the fineness of grid that we
         want to build
 
-    low_bounds : array (float, ndim=2)
+    lb : array (float, ndim=2)
         This is an array of the lower bounds for each dimension
 
-    up_bounds : array (float, ndim=2)
+    ub : array (float, ndim=2)
         This is an array of the upper bounds for each dimension
 
     grid : array (float, ndim=2)
@@ -669,10 +694,32 @@ class SmolyakGrid(object):
         B: 0.68% non-zero
 
     """
-    def __init__(self, d, mu, low_bounds, up_bounds):
+    def __init__(self, d, mu, lb=None, ub=None):
         self.d = d
-        self.low_bounds = low_bounds
-        self.up_bounds = up_bounds
+
+        if lb is None:  # default is [-1, 1]^d
+            self.lb = -1 * np.ones(d)
+        elif isinstance(lb, int) or isinstance(lb, float):  # scalar. copy it
+            self.lb = np.ones(d) * lb
+        elif isinstance(lb, list) or isinstance(lb, np.ndarray):
+            lb = np.asarray(lb)
+            if lb.size == d:
+                self.lb = lb
+            else:
+                raise ValueError("lb must be a scalar or array-like object" +
+                                 "with d elements.")
+
+        if ub is None:  # default is [-1, 1]^d
+            self.ub = 1 * np.ones(d)
+        elif isinstance(ub, int) or isinstance(ub, float):  # scalar. copy it
+            self.ub = np.ones(d) * ub
+        elif isinstance(ub, list) or isinstance(ub, np.ndarray):
+            ub = np.asarray(ub)
+            if ub.size == d:
+                self.ub = ub
+            else:
+                raise ValueError("lb must be a scalar or array-like object" +
+                                 "with d elements.")
 
         if d <= 1:
             raise ValueError('Number of dimensions must be >= 2')
@@ -685,7 +732,7 @@ class SmolyakGrid(object):
             self.inds = smol_inds(d, mu)
             self.pinds = poly_inds(d, mu, inds=self.inds)
             self.grid = build_grid(self.d, self.mu, self.inds)
-            self.org_grid = self.inv_trans_points(self.grid)
+            self.org_grid = self.cube2dom(self.grid)
             self.B = build_B(self.d, self.mu, self.grid, self.pinds)
 
         else:  # Anisotropic case
@@ -701,7 +748,7 @@ class SmolyakGrid(object):
             self.inds = smol_inds(d, mu)
             self.pinds = poly_inds(d, mu, inds=self.inds)
             self.grid = build_grid(self.d, self.mu, self.inds)
-            self.org_grid = self.inv_trans_points(self.grid)
+            self.org_grid = self.cube2dom(self.grid)
             self.B = build_B(self.d, self.mu, self.grid, self.pinds)
 
         # Compute LU decomposition of B
@@ -728,25 +775,24 @@ class SmolyakGrid(object):
     def __str__(self):
         return self.__repr__()
 
-    def trans_points(self, pts):
+    def dom2cube(self, pts):
         """
         Takes a point(s) and transforms it(them) into the [-1, 1]^d domain
         """
         # Could add some bounds checks to make sure points are in the
         # correct domain (between low and up bounds) and if right dim
 
-        dim = self.d
-        low_bounds = self.low_bounds
-        up_bounds = self.up_bounds
+        lb = self.lb
+        ub = self.ub
 
-        centers = low_bounds + (up_bounds - low_bounds)/2
-        radii = (up_bounds - low_bounds)/2
+        centers = lb + (ub - lb)/2
+        radii = (ub - lb)/2
 
         trans_pts = (pts-centers)/radii
 
         return trans_pts
 
-    def inv_trans_points(self, pts):
+    def cube2dom(self, pts):
         """
         Takes a point(s) and transforms it(them) from domain [-1, 1]^d
         back into the desired domain
@@ -754,12 +800,11 @@ class SmolyakGrid(object):
         # Also could use some bounds checks/other stuff to make sure
         # that everything being passed in is viable
 
-        dim = self.d
-        low_bounds = self.low_bounds
-        up_bounds = self.up_bounds
+        lb = self.lb
+        ub = self.ub
 
-        centers = low_bounds + (up_bounds - low_bounds)/2
-        radii = (up_bounds - low_bounds)/2
+        centers = lb + (ub - lb)/2
+        radii = (ub - lb)/2
 
         inv_trans_pts = pts*radii + centers
 
