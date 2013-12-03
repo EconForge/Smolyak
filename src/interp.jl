@@ -6,8 +6,6 @@ require("grid.jl")
 
 type SmolyakInterp
     SGrid::SmolyakGrid
-    # u::Vector{Float64}
-    # l::Vector{Float64}
     f_on_grid::Vector{Float64}
     theta::Vector{Float64}
 
@@ -15,20 +13,20 @@ type SmolyakInterp
         # Constructor with a grid and the value of function on the grid
 
         theta = find_theta(sg, fgrid)::Vector{Float64}
-        new(sg, fgrid, theta)
+        return new(sg, fgrid, theta)
     end
 
     # Default Constructor (just in case)
-    # function SmolyakInterp(sg, u, l, f, theta)
-    #     new(sg, u, l, f, theta)
-    # end
+    function SmolyakInterp(sg, f, theta)
+        new(sg, f, theta)
+    end
 
 end
 
 
 function find_theta{T <: Real}(sg::SmolyakGrid, f_on_grid::Vector{T})
-    # Use pre-computed LU decomp to get coefficients
-   return sg.B_U \ (sg.B_L \ f_on_grid)
+    # Use pre-computed inverse of B to get coefficients
+   return sg.B_fact \ f_on_grid
 end
 
 
@@ -69,9 +67,28 @@ function interpolate(si::SmolyakInterp, pts::Matrix{Float64})
     n = size(pts, 1)
     d = size(pts, 2)
 
-    @assert d == si.SGrid.d
+    @assert d == si.SGrid.d # check number of dimensions
 
     new_B = build_B(d, si.SGrid.mu, pts, si.SGrid.pinds)
-    vals = new_B * si.theta
-    return vals
+    ipts = new_B * si.theta
+    return ipts
 end
+
+
+# function interpolate(si::SmolyakInterp, pts::Matrix{Float64}, deriv::Bool=false)
+#     if deriv
+#         n = size(pts, 1)
+#         d = size(pts, 2)
+#         @assert d == si.SGrid.d # check number of dimensions
+
+#         Us = cheby2n(pts, maximum(si.SGrid.mu) + 1, kind=2.0)
+#         Us = cat(3, zeros(n, d, 1), Us)
+#         # for i = 1:length(si.theta)
+
+#     else
+#         return interpolate(si, pts)
+#     end
+
+# end
+
+

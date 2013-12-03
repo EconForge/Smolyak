@@ -456,58 +456,6 @@ end
 
 
 # Build B-matrix
-function build_B(d::Int, mu::IntSorV, grid::Array{Float64, 2},
-                 inds::Array{Any}={})
-    """
-    Compute the matrix B from equation 22 in JMMV 2013
-
-    Optimized translation of
-    `dolo.numeric.interpolation.smolyak.SmolyakBasic`
-
-    Parameters
-    ----------
-    d : int
-        The number of dimensions on the grid
-
-    mu : int or array (int, ndim=1, legnth=d)
-        The mu parameter used to define grid
-
-    grid : array (float, dims=2)
-        The smolyak grid returned by calling `build_grid(d, mu)`
-
-    inds : list (list (int)), optional (default=None)
-        The Smolyak indices for parameters d and mu. Should be computed
-        by calling `smol_inds(d, mu)`. If None is given, the indices
-        are computed using this function call
-
-    Returns
-    -------
-    B : array (float, 2)
-        The matrix B that represents the Smolyak polynomial
-        corresponding to grid
-
-    """
-    if length(inds) == 0
-        inds = smol_inds(d, mu)
-    end
-
-    Ts = cheby2n(grid, m_i(maximum(mu) + 1))::Array{Float64, 3}
-    b_inds = poly_inds(d, mu, inds)::Array{Int64, 2}
-    n = size(grid, 1)::Int64
-    B = ones(n, n)::Array{Float64, 2}
-    for ind = 1:n
-        for k in 1:d
-            b = b_inds[ind,k]::Int64
-            for i in 1:n
-                @inbounds B[i,ind] *= Ts[i, k, b]
-            end
-        end
-    end
-    return B
-end
-
-
-# Build B-matrix
 function build_B(d::Int, mu::IntSorV, pts::Array{Float64, 2},
                  b_inds::Array{Int64, 2})
     """
@@ -572,8 +520,7 @@ type SmolyakGrid
     inds::Array{Any, 1}  # Smolyak indices
     pinds::Matrix{Int64}  # Polynomial indices
     B::Matrix{Float64}  # matrix representing interpoland
-    B_L::Matrix{Float64}  # L from LU decomposition of B
-    B_U::Matrix{Float64}  # U from LU decomposition of B
+    B_fact::LU{Float64}  # LU(copy(B)) -- LU factorization of B
 
     # Isotropic constructor
     function SmolyakGrid(d::Int, mu::Int)
@@ -588,11 +535,9 @@ type SmolyakGrid
         pinds = poly_inds(d, mu, inds)
         grid = build_grid(d, mu, inds)
         B = build_B(d, mu, grid, pinds)
-        lu_B = lu(B)
-        B_L = lu_B[1]
-        B_U = lu_B[2]
+        B_fact = lufact(B)
 
-        new(d, mu, grid, inds, pinds, B, B_L, B_U)
+        new(d, mu, grid, inds, pinds, B, B_fact)
     end
 
     # Anisotropic constructor
@@ -612,16 +557,14 @@ type SmolyakGrid
         pinds = poly_inds(d, mu, inds)
         grid = build_grid(d, mu, inds)
         B = build_B(d, mu, grid, pinds)
-        lu_B = lu(B)
-        B_L = lu_B[1]
-        B_U = lu_B[2]
+        B_fact = lufact(B)
 
-        new(d, mu, grid, inds, pinds, B, B_L, B_U)
+        new(d, mu, grid, inds, pinds, B, B_fact)
     end
 
     # Default constructor, just in case someone gets brave
-    function SmolyakGrid(d, mu, grid, inds, pinds, B, B_L, B_U)
-        new(d, mu, grid, inds, pinds, B, B_L, B_U)
+    function SmolyakGrid(d, mu, grid, inds, pinds, B, B_fact)
+        new(d, mu, grid, inds, pinds, B, B_fact)
     end
 end
 
