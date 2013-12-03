@@ -1,19 +1,12 @@
 smolyak Package
 ===============
 
-:mod:`grid` Module
-------------------
+:mod:`smolyak` Package
+----------------------
 
-.. automodule:: smolyak.grid
-    :members:
-    :undoc-members:
-    :show-inheritance:
+.. toctree::
+   :maxdepth: 4
 
-:mod:`util` Module
-------------------
-
-.. automodule:: smolyak.util
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
+   grid
+   interp
+   util
