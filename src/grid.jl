@@ -518,7 +518,7 @@ Takes a point(s) and transforms it(them) into the [-1, 1]^d domain
     centers = lb + (ub - lb)./2
     radii = (ub - lb)./2
 
-    cube_points = (pts .- centers)./radii
+    cube_points = (pts .- centers')./radii'
 
     return cube_points
 end
@@ -533,7 +533,7 @@ back into the desired domain
     centers = lb + (ub - lb)./2
     radii = (ub - lb)./2
 
-    dom_points = broadcast(+, centers, pts.*radii)
+    dom_points = centers' .+ pts.*radii'
 
     return dom_points
 end
