@@ -11,9 +11,12 @@ Julia:
 
 
 Python:
- ☐ Interpolation Routines
+ ✔ Interpolation Routines @done (13-12-03 12:51)
  ✔ Anisotropic grids @done (13-11-27 23:51)
- ☐ Non [-1, 1]^d grids/routines (see dolo)
+ ✔ Non [-1, 1]^d grids/routines (see dolo) @done (13-12-03 12:51)
 
 General Improvements:
   ☐ Improve the build B function.  We spend 90%+ of our time stuck building it.
+
+Docs:
+  ☐ Make it so users can go next and previous from module pages (right now they have to go pack to the Smolyak Package page) 2013-12-03 12:52
