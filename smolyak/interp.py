@@ -35,7 +35,7 @@ class SmolyakInterp(object):
     def __init__(self, sg, f_on_grid):
         self.sg = sg
         self.f_on_grid = self.trans_vals(f_on_grid)
-        self.theta = find_theta(sg, f_on_grid)
+        self.theta = find_theta(sg, self.f_on_grid)
 
     def trans_vals(self, pts):
         """
