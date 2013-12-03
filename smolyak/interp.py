@@ -29,7 +29,7 @@ class SmolyakInterp(object):
         self.f_on_grid = f_on_grid
         self.theta = find_theta(sg, self.f_on_grid)
 
-    def interpolate(self, pts, with_deriv=False):
+    def interpolate(self, pts, deriv=False):
         """
         Basic interpolation.
 
@@ -62,10 +62,19 @@ class SmolyakInterp(object):
         # Give ourselves the value of theta
         theta = self.theta
         # Move points to correct domain
-        trans_points = self.sg.trans_points(pts)
+        trans_points = self.sg.dom2cube(pts)
 
+        if deriv:
+            new_B, der_B = build_B(d, sg.mu, trans_points, sg.pinds, True)
+            vals = new_B.dot(theta)
+
+            # TODO: test this. I am going to bed.
+            d_vals = np.tensordot(theta, der_B, (0, 0))
+
+            return vals, d_vals
+
+        # else: no derivs
         new_B = build_B(d, sg.mu, trans_points, sg.pinds)
         vals = new_B.dot(theta)
 
-        return vals
-
+        return vals  # no derivs
