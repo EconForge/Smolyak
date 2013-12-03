@@ -486,13 +486,18 @@ def build_B(d, mu, pts, b_inds=None, deriv=False):
 
     deriv : bool
         Whether or not to compute the values needed for the derivative matrix
-        B.
+        B_prime.
 
     Returns
     -------
-    B : array (float, 2)
+    B : array (float, ndim=2)
         The matrix B that represents the Smolyak polynomial
         corresponding to grid
+
+    B_Prime : array (float, ndim=3), optional (default=false)
+        This will be the 3 dimensional array representing the gradient of the
+        Smolyak polynomial at each of the points. It is only returned when
+        `deriv=True`
 
     """
     if b_inds is None:
@@ -520,7 +525,6 @@ def build_B(d, mu, pts, b_inds=None, deriv=False):
             Us[i, :, :] = Us[i, :, :] * i
 
         der_B = np.zeros((npolys, d, npts))
-        import ipdb; ipdb.set_trace()
 
         for i in range(d):
             el = []
