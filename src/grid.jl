@@ -506,6 +506,38 @@ function build_B(d::Int, mu::IntSorV, pts::Array{Float64, 2},
     return B
 end
 
+########################################################
+# TODO: These 2 functions are having broadcast problems
+########################################################
+function dom2cube(pts::Matrix{Float64}, lb::Array{Float64, 1}, ub::Array{Float64, 1})
+"""
+Takes a point(s) and transforms it(them) into the [-1, 1]^d domain
+"""
+    dim = size(pts, 2)::Int64
+
+    centers = lb + (ub - lb)./2
+    radii = (ub - lb)./2
+
+    cube_points = (pts .- centers)./radii
+
+    return cube_points
+end
+
+function cube2dom(pts::Matrix{Float64}, lb::Array{Float64, 1}, ub::Array{Float64, 1})
+"""
+Takes a point(s) and transforms it(them) from domain [-1, 1]^d
+back into the desired domain
+"""
+    dim = size(pts, 2)::Int64
+
+    centers = lb + (ub - lb)./2
+    radii = (ub - lb)./2
+
+    dom_points = broadcast(+, centers, pts.*radii)
+
+    return dom_points
+end
+
 
 ## ----------------- ##
 #- Type: SmolyakGrid -#
@@ -516,14 +548,18 @@ end
 type SmolyakGrid
     d::Int  # number of dimensions
     mu::IntSorV  # density. Int or d element vector of Int
+    lb::Array{Float64, 1} # This is the lower bound for the org_grid (the domain)
+    ub::Array{Float64, 1} # This is the upper bound for the org_grid (the domain)
     grid::Matrix{Float64}  # Smolyak grid
+    org_grid::Matrix{Float64} # Smolyak grid on original domain
     inds::Array{Any, 1}  # Smolyak indices
     pinds::Matrix{Int64}  # Polynomial indices
     B::Matrix{Float64}  # matrix representing interpoland
     B_fact::LU{Float64}  # LU(copy(B)) -- LU factorization of B
 
     # Isotropic constructor
-    function SmolyakGrid(d::Int, mu::Int)
+    function SmolyakGrid(d::Int, mu::Int, lb::Array{Float64, 1}=ones(d).*-1,
+                         ub::Array{Float64, 1}=ones(d))
         if d < 2
             error("You passed d = $d. d must be greater than 1")
         end
@@ -534,14 +570,17 @@ type SmolyakGrid
         inds = smol_inds(d, mu)
         pinds = poly_inds(d, mu, inds)
         grid = build_grid(d, mu, inds)
+        org_grid = cube2dom(grid, lb, ub)
         B = build_B(d, mu, grid, pinds)
         B_fact = lufact(B)
 
-        new(d, mu, grid, inds, pinds, B, B_fact)
+        new(d, mu, lb, ub, grid, org_grid, inds, pinds, B, B_fact)
     end
 
     # Anisotropic constructor
-    function SmolyakGrid(d::Int, mu::Array{Int, 1})
+    function SmolyakGrid(d::Int, mu::Array{Int, 1},
+                         lb::Array{Float64, 1}=ones(d).*-1,
+                         ub::Array{Float64, 1}=ones(d))
         if d < 2
             error("You passed d = $d. d must be greater than 1")
         end
@@ -556,16 +595,17 @@ type SmolyakGrid
         inds = smol_inds(d, mu)
         pinds = poly_inds(d, mu, inds)
         grid = build_grid(d, mu, inds)
+        org_grid = cube2dom(grid, lb, ub)
         B = build_B(d, mu, grid, pinds)
         B_fact = lufact(B)
 
-        new(d, mu, grid, inds, pinds, B, B_fact)
+        new(d, mu, lb, ub, grid, org_grid, inds, pinds, B, B_fact)
     end
 
     # Default constructor, just in case someone gets brave
-    function SmolyakGrid(d, mu, grid, inds, pinds, B, B_fact)
-        new(d, mu, grid, inds, pinds, B, B_fact)
-    end
+    # function SmolyakGrid(d, mu, lb, ub, grid, org_grid, inds, pinds, B, B_fact)
+    #     new(d, mu, lb, ub, grid, org_grid, inds, pinds, B, B_fact)
+    # end
 end
 
 

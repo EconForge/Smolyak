@@ -69,7 +69,10 @@ function interpolate(si::SmolyakInterp, pts::Matrix{Float64})
 
     @assert d == si.SGrid.d # check number of dimensions
 
-    new_B = build_B(d, si.SGrid.mu, pts, si.SGrid.pinds)
+    # dom2cube is still having trouble in other function which is why
+    # it won't work here yet.  This is just to get it in.
+    cube_pts = dom2cube(pts)
+    new_B = build_B(d, si.SGrid.mu, cube_pts, si.SGrid.pinds)
     ipts = new_B * si.theta
     return ipts
 end
