@@ -5,6 +5,8 @@ from smolyak.interp import SmolyakInterp
 import numpy as np
 
 func = lambda x, y: np.exp(x**2 - y**2)
+# func = lambda x, y: x**2 - y**2
+
 
 func1 = lambda points: func(points[:, 0], points[:, 1])
 
@@ -54,5 +56,5 @@ def test_interp_2d1(d, mu, f):
           .format(mean_ad, max_ad, min_ad))
     return
 
-test_interp_2d(2, 5, func1)
-test_interp_2d1(2, 5, func1)
+test_interp_2d(2, 3, func1)
+test_interp_2d1(2, 3, func1)
