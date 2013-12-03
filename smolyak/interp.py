@@ -5,17 +5,8 @@ soon.
 """
 
 from __future__ import division
-from operator import mul
-from itertools import product, combinations_with_replacement
-from itertools import chain
-import numpy as np
 import numpy.linalg as la
-from scipy.linalg import lu
-import matplotlib.pyplot as plt
-import pandas as pd
-from mpl_toolkits.mplot3d import Axes3D
-from util import *
-from grid import *
+from grid import SmolyakGrid
 
 
 def find_theta(sg, f_on_grid):
