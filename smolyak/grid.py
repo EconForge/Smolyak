@@ -536,94 +536,146 @@ def build_B(d, mu, pts, b_inds=None, deriv=False):
     return B
 
 
-# def exp_B(d, mu, grid):
-#     """
-#     write a nice doc string if it works
-#     """
-#     npts = grid.shape[0]
-#     num_chebs = m_i(mu + 1)
-#     max_ind = d + mu
-#     aphi = phi_chain(mu + 1)
+def exp_B(d, mu, grid):
+    """
+    write a nice doc string if it works
+    """
+    npts = grid.shape[0]
+    num_chebs = m_i(mu + 1)
+    max_ind = d + mu
+    aphi = phi_chain(mu + 1)
 
-#     B = np.ones((npts, npts))
+    B = np.ones((npts, npts))
 
-#     # These are simply all the values of phi_n (up to n=mu+1) where all
-#     # other indices on the phi are 1 (hence valued at 1)
-#     easy_B = chebyvalto(grid, num_chebs)
+    # These are simply all the values of phi_n (up to n=mu+1) where all
+    # other indices on the phi are 1 (hence valued at 1)
+    easy_B = chebyvalto(grid, num_chebs)
 
-#     B[:, :d*(num_chebs-1)] = easy_B
+    B[:, :d*(num_chebs-1)] = easy_B
 
-#     # Create a tracker to keep track of indexes
-#     B_col_mrk = d*(num_chebs - 1)
+    # Create a tracker to keep track of indexes
+    B_col_mrk = d*(num_chebs - 1)
 
-#     # Now we need to account for all the cross products
-#     # We have the values we need hiding in B already.  No need to
-#     # compute any more.  They are multiplications of different numbers
-#     # of elements from the pieces of easy_B.
-#     if mu==2:
-#         for i in xrange(d-1):
-
-
-#             mult_inds = np.hstack([np.arange(i+1, d), np.arange(d + (i+1), 2*d)])
-
-#             temp1 = easy_B[:, i].reshape(npts, 1) * easy_B[:, mult_inds]
-#             temp2 = temp2 = easy_B[:, i+d].reshape(npts, 1) * easy_B[:, mult_inds]
-
-#             new_cols = temp1.shape[1] + temp2.shape[1]
-#             B[:, B_col_mrk: B_col_mrk + new_cols] = np.hstack([temp1, temp2])
-#             B_col_mrk = B_col_mrk + new_cols
+    # Now we need to account for all the cross products
+    # We have the values we need hiding in B already.  No need to
+    # compute any more.  They are multiplications of different numbers
+    # of elements from the pieces of easy_B.
+    if mu==2:
+        for i in xrange(d-1):
 
 
-#     #-----------------------------------------------------------------#
-#     #-----------------------------------------------------------------#
-#     # This part will be the general section.  Above I am trying to
-#     # make it work with just mu=2
-#     # NOTE: Below this point the code is incomplete.  At best this is
-#     # some general pseudo-code to write the generalization step.  Hoping
-#     # to make it handle general cases.
-#     #-----------------------------------------------------------------#
-#     #-----------------------------------------------------------------#
+            mult_inds = np.hstack([np.arange(i+1, d), np.arange(d + (i+1), 2*d)])
 
-#     # for i in xrange(2, mu+1):
-#     #     curr_ind = i
+            temp1 = easy_B[:, i].reshape(npts, 1) * easy_B[:, mult_inds]
+            temp2 = temp2 = easy_B[:, i+d].reshape(npts, 1) * easy_B[:, mult_inds]
 
-#     #     while True:
-#     #         curr_dim = 2
-#     #         curr_col = 0
+            new_cols = temp1.shape[1] + temp2.shape[1]
+            B[:, B_col_mrk: B_col_mrk + new_cols] = np.hstack([temp1, temp2])
+            B_col_mrk = B_col_mrk + new_cols
 
-#     #         # Find which possible polynomials can be reached (lowest is 2)
-#     #         poss_inds = np.arange(2, m_i(some function of curr_ind, d, mu)+1)
+    if mu==3:
+        for i in xrange(d-1):
+            mult_inds = np.hstack([np.arange(i+1, d), np.arange(d + (i+1), 2*d),
+                                   np.arange(2*d + (i+1), 3*d), np.arange(3*d + (i+1), 4*d)])
 
-#     #         for dd in xrange(d-1):
-#     #             # Create range of d to be used to build the fancy index
-#     #             mult_ind = np.arange(curr_col+1, d)
+            temp1 = easy_B[:, i].reshape(npts, 1) * easy_B[:, mult_inds]
+            temp2 = easy_B[:, i+d].reshape(npts, 1) * easy_B[:, mult_inds]
+            temp3 = easy_B[:, i+2*d].reshape(npts, 1) * easy_B[:, mult_inds]
+            temp3 = easy_B[:, i+3*d].reshape(npts, 1) * easy_B[:, mult_inds]
 
-#     #             # Initialize array for fancy index.  Want to add arange(d) + (d*i)
-#     #             # for every chebyshev polynomial that we need to reach with these
-#     #             # indexes
-#     #             mult_inds = np.array([])
-#     #             for tt in xrange(some condition for what is max polynomial we reach -1):
-#     #                 mult_inds = np.hstack([mult_inds, mult_inds + (d*tt)])
+            new_col_nums = temp1.shape[1] + temp2.shape[1]
+            B[:, B_col_mrk: B_col_mrk + new_col_nums] = np.hstack([temp1, temp2])
+            B_col_mrk = B_col_mrk + new_col_nums
 
-#     #             # this will create the column times all the stuff following it
-#     #             # in the other indexes
-#     #             temp1 = easy_B[:, curr_col] * easy_B[:, mult_inds]
+        all_inds = np.arange(d)
+        for i in xrange(d):
+            col_1 = i
+            col_val2 = easy_B[:, i].reshape(npts, 1)
+            col_val3 = easy_B[:, i + d].reshape(npts, 1)
+            col_val4 = easy_B[:, i + 2*d].reshape(npts, 1)
+            col_val5 = easy_B[:, i + 3*d].reshape(npts, 1)
+            # Check code from here.  write out which pieces need to be
+            # in here and see what is being built
+            for j in xrange(i, d):
+                if j!=i:
+                    col_2 = j
+                    mult_inds2 = all_inds[(all_inds>i) & (all_inds!=j)]
+                    mult_inds3 = all_inds[(all_inds>i) & (all_inds!=j)]+d
+                    mult_inds4 = all_inds[(all_inds>i) & (all_inds!=j)]+2*d
+                    mult_inds5 = all_inds[(all_inds>i) & (all_inds!=j)]+3*d
+                    big_inds = np.hstack([mult_inds2, mult_inds3, mult_inds4, mult_inds5])
+                    # print(big_inds, big_inds.shape)
 
-#     #             new_cols = temp1.shape[1]
+                    col2_val2 = easy_B[:, j].reshape(npts, 1)
+                    col2_val3 = easy_B[:, j + d].reshape(npts, 1)
+                    col2_val4 = easy_B[:, j + 2*d].reshape(npts, 1)
+                    col2_val5 = easy_B[:, j + 3*d].reshape(npts, 1)
 
-#     #             B[:, B_col_mrk: B_col_mrk + new_cols] = temp1
+                    temp2 = col_val2 * col2_val2 * easy_B[:, big_inds]
+                    temp3 = col_val3 * col2_val3 * easy_B[:, big_inds]
+                    temp4 = col_val4 * col2_val4 * easy_B[:, big_inds]
+                    temp5 = col_val5 * col2_val5 * easy_B[:, big_inds]
 
-#     #             while d>curr_dim and condition for continuing is met:
-#     #                 curr_dim += 1
-#     #                 for mm in xrange(curr_col + 2, d-1):
-#     #                     for bb in mult_inds[:-1]:
-#     #                         temp2 = easy_B[:, bb*d + mm] * temp1
-#     #                         new_cols2 = temp2.shape[1]
-#     #                         B[:, B_col_mrk: B_col_mrk + new_cols2]
+                    new_cols = np.hstack([temp2, temp3, temp4, temp5])
 
-#                 # Need to continue code.  It is not done yet
+                    new_cols_num = new_cols.shape[1]
 
-#     return B
+                    B[:, B_col_mrk: B_col_mrk + new_cols_num] = new_cols
+                    # print(np.sum(B, axis=0))
+
+                    B_col_mrk = B_col_mrk + new_cols_num
+
+
+    #-----------------------------------------------------------------#
+    #-----------------------------------------------------------------#
+    # This part will be the general section.  Above I am trying to
+    # make it work with just mu=2
+    # NOTE: Below this point the code is incomplete.  At best this is
+    # some general pseudo-code to write the generalization step.  Hoping
+    # to make it handle general cases.
+    #-----------------------------------------------------------------#
+    #-----------------------------------------------------------------#
+
+    # for i in xrange(2, mu+1):
+    #     curr_ind = i
+
+    #     while True:
+    #         curr_dim = 2
+    #         curr_col = 0
+
+    #         # Find which possible polynomials can be reached (lowest is 2)
+    #         poss_inds = np.arange(2, m_i(some function of curr_ind, d, mu)+1)
+
+    #         for dd in xrange(d-1):
+    #             # Create range of d to be used to build the fancy index
+    #             mult_ind = np.arange(curr_col+1, d)
+
+    #             # Initialize array for fancy index.  Want to add arange(d) + (d*i)
+    #             # for every chebyshev polynomial that we need to reach with these
+    #             # indexes
+    #             mult_inds = np.array([])
+    #             for tt in xrange(some condition for what is max polynomial we reach -1):
+    #                 mult_inds = np.hstack([mult_inds, mult_inds + (d*tt)])
+
+    #             # this will create the column times all the stuff following it
+    #             # in the other indexes
+    #             temp1 = easy_B[:, curr_col] * easy_B[:, mult_inds]
+
+    #             new_cols = temp1.shape[1]
+
+    #             B[:, B_col_mrk: B_col_mrk + new_cols] = temp1
+
+    #             while d>curr_dim and condition for continuing is met:
+    #                 curr_dim += 1
+    #                 for mm in xrange(curr_col + 2, d-1):
+    #                     for bb in mult_inds[:-1]:
+    #                         temp2 = easy_B[:, bb*d + mm] * temp1
+    #                         new_cols2 = temp2.shape[1]
+    #                         B[:, B_col_mrk: B_col_mrk + new_cols2]
+
+                # Need to continue code.  It is not done yet
+
+    return B
 
 
 
