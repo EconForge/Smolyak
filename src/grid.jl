@@ -509,10 +509,10 @@ end
 ########################################################
 # TODO: These 2 functions are having broadcast problems
 ########################################################
-function dom2cube(pts::Matrix{Float64}, lb::Array{Float64, 1}, ub::Array{Float64, 1})
-"""
-Takes a point(s) and transforms it(them) into the [-1, 1]^d domain
-"""
+function dom2cube(pts::Matrix{Float64}, lb::Vector{Float64}, ub::Vector{Float64})
+    """
+    Takes a point(s) and transforms it(them) into the [-1, 1]^d domain
+    """
     dim = size(pts, 2)::Int64
 
     centers = lb + (ub - lb)./2
@@ -523,11 +523,11 @@ Takes a point(s) and transforms it(them) into the [-1, 1]^d domain
     return cube_points
 end
 
-function cube2dom(pts::Matrix{Float64}, lb::Array{Float64, 1}, ub::Array{Float64, 1})
-"""
-Takes a point(s) and transforms it(them) from domain [-1, 1]^d
-back into the desired domain
-"""
+function cube2dom(pts::Matrix{Float64}, lb::Vector{Float64}, ub::Vector{Float64})
+    """
+    Takes a point(s) and transforms it(them) from domain [-1, 1]^d
+    back into the desired domain
+    """
     dim = size(pts, 2)::Int64
 
     centers = lb + (ub - lb)./2
@@ -548,10 +548,10 @@ end
 type SmolyakGrid
     d::Int  # number of dimensions
     mu::IntSorV  # density. Int or d element vector of Int
-    lb::Array{Float64, 1} # This is the lower bound for the org_grid (the domain)
-    ub::Array{Float64, 1} # This is the upper bound for the org_grid (the domain)
-    grid::Matrix{Float64}  # Smolyak grid
-    org_grid::Matrix{Float64} # Smolyak grid on original domain
+    lb::Array{Float64, 1} # This is the lower bound for the grid (the domain)
+    ub::Array{Float64, 1} # This is the upper bound for the grid (the domain)
+    cube_grid::Matrix{Float64}  # Smolyak grid on [-1, 1]^d
+    grid::Matrix{Float64} # Smolyak grid on original domain
     inds::Array{Any, 1}  # Smolyak indices
     pinds::Matrix{Int64}  # Polynomial indices
     B::Matrix{Float64}  # matrix representing interpoland
@@ -569,12 +569,12 @@ type SmolyakGrid
 
         inds = smol_inds(d, mu)
         pinds = poly_inds(d, mu, inds)
-        grid = build_grid(d, mu, inds)
-        org_grid = cube2dom(grid, lb, ub)
-        B = build_B(d, mu, grid, pinds)
+        cube_grid = build_grid(d, mu, inds)
+        grid = cube2dom(cube_grid, lb, ub)
+        B = build_B(d, mu, cube_grid, pinds)
         B_fact = lufact(B)
 
-        new(d, mu, lb, ub, grid, org_grid, inds, pinds, B, B_fact)
+        new(d, mu, lb, ub, cube_grid, grid, inds, pinds, B, B_fact)
     end
 
     # Anisotropic constructor
@@ -594,24 +594,31 @@ type SmolyakGrid
 
         inds = smol_inds(d, mu)
         pinds = poly_inds(d, mu, inds)
-        grid = build_grid(d, mu, inds)
-        org_grid = cube2dom(grid, lb, ub)
-        B = build_B(d, mu, grid, pinds)
+        cube_grid = build_grid(d, mu, inds)
+        grid = cube2dom(cube_grid, lb, ub)
+        B = build_B(d, mu, cube_grid, pinds)
         B_fact = lufact(B)
 
-        new(d, mu, lb, ub, grid, org_grid, inds, pinds, B, B_fact)
+        new(d, mu, lb, ub, cube_grid, grid, inds, pinds, B, B_fact)
     end
 
     # Default constructor, just in case someone gets brave
-    # function SmolyakGrid(d, mu, lb, ub, grid, org_grid, inds, pinds, B, B_fact)
-    #     new(d, mu, lb, ub, grid, org_grid, inds, pinds, B, B_fact)
-    # end
+    function SmolyakGrid(d, mu, lb, ub, cube_grid, grid, inds, pinds, B, B_fact)
+        new(d, mu, lb, ub, cube_grid, grid, inds, pinds, B, B_fact)
+    end
+end
+
+
+function SmolyakGrid(d::Int, mu::IntSorV, lb::Real, ub::Real)
+    lb = ones(d) * lb
+    ub = ones(d) * ub
+    return SmolyakGrid(d, mu, lb, ub)
 end
 
 
 function show(io::IO, sg::SmolyakGrid)
     "show method for SmolyakGrid type"
-    npoints = size(sg.grid, 1)
+    npoints = size(sg.cube_grid, 1)
     non_zero_pts = nnz(sg.B)
     pct_non_zero = (non_zero_pts / (npoints ^ 2)) * 100
     if isa(sg.mu, Array)
@@ -633,14 +640,15 @@ end
 
 function plot(sg::SmolyakGrid)
     g = sg.grid
+    mu  = sg.mu
+    d = sg.d
+    mu_str = isa(mu, Array) ? replace(strip(string(mu)),'\n'," \\times ") : mu
     if size(g, 2) == 2
-        PyPlot.plot(g[:, 1], g[:, 2], "b.")
-        PyPlot.xlim((-1.5, 1.5))
-        PyPlot.ylim((-1.5, 1.5))
-        PyPlot.title("Smolyak grid: \$d=$(sg.d), \\; \\mu=$(sg.mu)\$")
+        PyPlot.scatter(g[:, 1], g[:, 2])
+        PyPlot.title("Smolyak grid: \$d=$(d), \\; \\mu=$(mu_str)\$")
     elseif size(g, 2) == 3
         PyPlot.scatter3D(g[:, 1], g[:, 2], g[:, 3], "b.")
-        PyPlot.title("Smolyak grid: \$d=$(sg.d), \\; \\mu=$(sg.mu)\$")
+        PyPlot.title("Smolyak grid: \$d=$(d), \\; \\mu=$(mu_str)\$")
     else
         error("ERROR: can only plot 2d or 3d grids")
     end
