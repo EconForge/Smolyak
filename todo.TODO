@@ -1,13 +1,17 @@
 Julia:
   ☐ Interpolation Routines
+    ✔ Standard @done (13-12-06 11:20)
+    ☐ Derivatives type 1 @started(13-12-06 11:20)
+    ☐ Derivatives type 2
+    ☐ Derivatives type 3
   ✔ Anisotropic grids @done (13-11-27 23:51)
-  ☐ Non [-1, 1]^d grids/routines (see dolo)
+  ✔ Non [-1, 1]^d grids/routines (see dolo) @done (13-12-06 11:20)
   Ideas:
     ☐ I noticed that for (40, 2) there are 10764961 points in B, but only 3090461 are non-zero. That is only 28.7085%. Maybe we should use sparse matrices. We should do some testing to see if that would help. @spencer @started(13-11-08 01:34)
   Speed Improvements:
    ☐Try to use the inbounds macro to speed up indexing -- this eliminates bounds checking @spencer 2013-11-21 10:26
    ✔ This is big re-write, but write things in column-major form. This should indexing quite a bit more efficient @done (13-11-29 14:18)
-   ☐ Add type checks in the middle of functions saves *A ton* of time. Trying to use build_B(15, 3) from Steven without them ran for over a minute before I stopped it. With the type checks it runs in 0.33 seconds. (2013-11-29 14:20)
+   ✔ Add type checks in the middle of functions saves *A ton* of time. Trying to use build_B(15, 3) from Steven without them ran for over a minute before I stopped it. With the type checks it runs in 0.33 seconds. (2013-11-29 14:20) @done (13-12-06 11:20)
 
 
 Python:
@@ -16,7 +20,12 @@ Python:
  ✔ Non [-1, 1]^d grids/routines (see dolo) @done (13-12-03 12:51)
 
 General Improvements:
-  ☐ Improve the build B function.  We spend 90%+ of our time stuck building it.
+  ☐ Improve the build B function.  We spend 90%+ of our time stuck building it. @chase
+    ☐ mu = 2 -- done in python
+    ☐ mu = 3 -- close in python
+    ☐ General mu -- haha
+
 
 Docs:
   ☐ Make it so users can go next and previous from module pages (right now they have to go pack to the Smolyak Package page) 2013-12-03 12:52
+  ☐ Add interpolation page 2013-12-06 11:20
