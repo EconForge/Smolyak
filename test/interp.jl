@@ -1,26 +1,49 @@
-using Distributions
-
 require("../src/grid.jl")
 require("../src/interp.jl")
 
-# Define test function
-func(x::Vector{Float64}, y::Vector{Float64}) = exp(- x.*x - y.*y)
-func(g::Matrix{Float64}) = func(g[:, 1], g[:, 2])
 
-# Construct Grid
-sg = SmolyakGrid(2, 8)
+const print_bool = true
+const print_str = "mean abs diff: %.3e\nmax abs diff: %.3e\nmin abs diff: %.3e"
+@eval print_func(x,y,z) = @printf($print_str, x, y, z)
 
-# Evaluate the function on the grid and get coefficient vector
-f_on_grid = func(sg.grid)
+# L2-norm squared
+f1(x) = squeeze(sum(x .^ 2, 2), 2)
+f1_p(x) = 2 * x
 
-si = SmolyakInterp(sg, f_on_grid)
+f2(x) = sin(x[:,1]) + cos(x[:, 2])
+f2_p(x) = [cos(x[:, 1]) -sin(x[:, 2])]
 
-# Generate some random normal data
-mvtnorm = MvNormal([0., 0.], eye(2).*0.05)
-s = rand(mvtnorm, 50)'  # Transpose it so it has same dims as sg.grid
 
-true_vals = func(s)
-interp_vals = interpolate(si, s)
+function test_interp2d_derivs(d::Int, mu::Int, f::Function, f_prime::Function, bds::Real=1)
+    sg = SmolyakGrid(d, mu, -bds, bds)
 
-mean_abs_diff = mean(abs(interp_vals - true_vals))
-println("mean_abs_diff = $mean_abs_diff")
+    f_on_grid = f(sg.grid)
+    si = SmolyakInterp(sg, f_on_grid)
+
+    srand(42)
+    test_points = randn(100, d)
+
+    # Make sure it is bounded by -bds, bds
+    test_points = (bds - 0.05) * test_points/maximum(abs(test_points))
+
+    true_vals = f(test_points)
+    true_vals_prime = f_prime(test_points)
+    i_vals = interpolate(si, test_points)
+
+    mean_ad = mean(abs(i_vals - true_vals))
+    max_ad = maximum(abs(i_vals - true_vals))
+    min_ad = minimum(abs(i_vals - true_vals))
+
+    if print_bool
+        println("Interpolation results\n" * "#" ^ 21)
+        print_func(mean_ad, max_ad, min_ad)
+    end
+
+    # return i_vals_prime
+end
+
+test_interp2d_derivs(15, 3, f2, f2_p, -2)
+
+@time test_interp2d_derivs(15, 3, f2, f2_p, -2)
+
+
