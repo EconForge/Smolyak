@@ -1,8 +1,7 @@
 """
 Uses the grid type from grid.jl to construct an interpolation type
-"""
-require("grid.jl")
 
+"""
 
 type SmolyakInterp
     SGrid::SmolyakGrid
@@ -20,7 +19,6 @@ type SmolyakInterp
     function SmolyakInterp(sg, f, theta)
         new(sg, f, theta)
     end
-
 end
 
 

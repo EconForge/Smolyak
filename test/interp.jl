@@ -2,7 +2,7 @@ require("../src/grid.jl")
 require("../src/interp.jl")
 
 
-const print_bool = true
+const verbose = true
 const print_str = "mean abs diff: %.3e\nmax abs diff: %.3e\nmin abs diff: %.3e"
 @eval print_func(x,y,z) = @printf($print_str, x, y, z)
 
@@ -34,7 +34,7 @@ function test_interp2d_derivs(d::Int, mu::Int, f::Function, f_prime::Function, b
     max_ad = maximum(abs(i_vals - true_vals))
     min_ad = minimum(abs(i_vals - true_vals))
 
-    if print_bool
+    if verbose
         println("Interpolation results\n" * "#" ^ 21)
         print_func(mean_ad, max_ad, min_ad)
     end

@@ -1,6 +1,3 @@
-import Cartesian
-
-
 function pmute(a::Union(Array{Float64, 1}, Array{Int64, 1}))
     # Return all unique permutations of the vector a, which must be a 1d
     # numerical array.
@@ -129,6 +126,13 @@ function comb_with_replacement(itr, r::Int)
 end
 
 
+function tensordot{T, S, N}(a::Array{T, N}, b::Array{S, N}, axes::Array{Int, 1})
+    if length(axes) != 2
+        error("Haven't written this one yet")
+    end
+    a, b = axes
+end
+
 ## ------------- ##
 #- Testing Tools -#
 ## ------------- ##
@@ -175,11 +179,11 @@ function all_close(x::Array, y::Array, rtol::Float64=1.e-5, atol::Float64=1.e-8)
     Examples
     --------
     julia> allclose([1e10,1e-7], [1.00001e10,1e-8])
-    False
+    false
     julia> allclose([1e10,1e-8], [1.00001e10,1e-9])
-    True
+    true
     julia> allclose([1e10,1e-8], [1.0001e10,1e-9])
-    False
+    false
 
     References
     ==========

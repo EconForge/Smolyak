@@ -23,10 +23,6 @@ Krueger, Dirk, and Felix Kubler. 2004. "Computing Equilibrium in OLG
     Control 28 (7) (April): 1411-1436.
 
 """
-import PyPlot
-import Base.show
-require("../src/util")
-
 ## --------------- ##
 #- Building Blocks -#
 ## --------------- ##
@@ -506,9 +502,7 @@ function build_B(d::Int, mu::IntSorV, pts::Array{Float64, 2},
     return B
 end
 
-########################################################
-# TODO: These 2 functions are having broadcast problems
-########################################################
+
 function dom2cube(pts::Matrix{Float64}, lb::Vector{Float64}, ub::Vector{Float64})
     """
     Takes a point(s) and transforms it(them) into the [-1, 1]^d domain
@@ -522,6 +516,7 @@ function dom2cube(pts::Matrix{Float64}, lb::Vector{Float64}, ub::Vector{Float64}
 
     return cube_points
 end
+
 
 function cube2dom(pts::Matrix{Float64}, lb::Vector{Float64}, ub::Vector{Float64})
     """
@@ -612,6 +607,14 @@ end
 function SmolyakGrid(d::Int, mu::IntSorV, lb::Real, ub::Real)
     lb = ones(d) * lb
     ub = ones(d) * ub
+    return SmolyakGrid(d, mu, lb, ub)
+end
+
+
+function SmolyakGrid(d::Int, mu::IntSorV, lub::Real)
+    lub = abs(lub)
+    lb = - ones(d) * lub
+    ub = ones(d) * lub
     return SmolyakGrid(d, mu, lb, ub)
 end
 
