@@ -15,8 +15,11 @@ func2 = lambda x: np.sum(x ** 2, axis=1)
 func2_prime = lambda x: 2 * x
 
 
-func3 = lambda x: np.sin(x[:,0]) + np.cos(x[:, 1])
-func3_prime = lambda x: np.column_stack([np.cos(x[:,0]), -np.sin(x[:,1])])
+func3 = lambda x: np.sin(x[:, 0]) + np.cos(x[:, 1])
+func3_prime = lambda x: np.column_stack([np.cos(x[:, 0]), -np.sin(x[:, 1])])
+
+msg = "mean abs diff is {}\nmax abs diff is {}\nmin abs diff is {}"
+
 
 def test_interp_2d(d, mu, f):
     lb = -2 * np.ones(d)
@@ -39,9 +42,9 @@ def test_interp_2d(d, mu, f):
     max_ad = np.max(np.abs(interp_vals - true_vals))
     min_ad = np.min(np.abs(interp_vals - true_vals))
 
-    print("The mean abs diff is {}\nThe max abs diff is {}\nThe min abs diff is {}"
-          .format(mean_ad, max_ad, min_ad))
+    print(msg.format(mean_ad, max_ad, min_ad))
     return
+
 
 def test_interp_2d1(d, mu, f):
     sg = SmolyakGrid(d, mu, np.array([-1, -1.]), np.array([1., 1.]))
@@ -62,24 +65,24 @@ def test_interp_2d1(d, mu, f):
     max_ad = np.max(np.abs(interp_vals - true_vals))
     min_ad = np.min(np.abs(interp_vals - true_vals))
 
-    print("The mean abs diff is {}\nThe max abs diff is {}\nThe min abs diff is {}"
-          .format(mean_ad, max_ad, min_ad))
+    print(msg.format(mean_ad, max_ad, min_ad))
     return
 
 
-def test_interp2d_derivs(d, mu, f, f_prime, bds=1):
+def test_interp2d_derivs(d, mu, f, f_prime, bds=1, verbose=True):
     sg = SmolyakGrid(d, mu, -bds, bds)
 
     f_on_grid = f(sg.grid)
     si = SmolyakInterp(sg, f_on_grid)
 
     np.random.seed(42)
-    test_points = np.random.randn(100, 2)
+    test_points = np.random.randn(100, d)
     # Make sure it is bounded by -2, 2
-    test_points = test_points/np.max(np.abs(test_points))
+    test_points = (bds - 0.05) * test_points/np.max(np.abs(test_points))
 
     true_vals = f(test_points)
     true_vals_prime = f_prime(test_points)
+    i_vals = si.interpolate(test_points)
     i_vals, i_vals_prime = si.interpolate(test_points, deriv=True)
 
     mean_ad = np.mean(np.abs(i_vals - true_vals))
@@ -90,15 +93,15 @@ def test_interp2d_derivs(d, mu, f, f_prime, bds=1):
     max_ad_prime = np.max(np.abs(i_vals_prime - true_vals_prime))
     min_ad_prime = np.min(np.abs(i_vals_prime - true_vals_prime))
 
-    msg = "mean abs diff is {}\nmax abs diff is {}\nmin abs diff is {}"
+    if verbose:
+        msg = "mean abs diff is {}\nmax abs diff is {}\nmin abs diff is {}"
+        print("Interpolation results\n" + "#" * 21)
+        print(msg.format(mean_ad, max_ad, min_ad))
 
-    print("Interpolation results\n" + "#" * 21)
-    print(msg.format(mean_ad, max_ad, min_ad))
+        print("Derivative results\n" + "#" * 18)
+        print(msg.format(mean_ad_prime, max_ad_prime, min_ad_prime))
 
-    print("Derivative results\n" + "#" * 18)
-    print(msg.format(mean_ad_prime, max_ad_prime, min_ad_prime))
-
-    return i_vals_prime
+    # return i_vals_prime
 
 
 test_interp_2d(2, 3, func1)

@@ -7,7 +7,7 @@ soon.
 from __future__ import division
 import numpy as np
 import numpy.linalg as la
-from grid import *
+from grid import build_B
 
 __all__ = ['find_theta', 'SmolyakInterp']
 
@@ -87,7 +87,6 @@ class SmolyakInterp(object):
         TODO: finish the docstring for the 2nd and 3rd type of derivatives
 
         """
-        n = pts.shape[0]
         d = pts.shape[1]
         sg = self.sg
 
@@ -105,7 +104,7 @@ class SmolyakInterp(object):
                 rets.append(vals)
             rets.append(sg.dom2cube(d_vals))
 
-        elif not deriv and interp:  # Don't compute derivs in build_B. Just do vals
+        elif not deriv and interp:  # No derivs in build_B. Just do vals
             new_B = build_B(d, sg.mu, trans_points, sg.pinds)
             vals = new_B.dot(theta)
             rets.append(vals)
@@ -128,27 +127,30 @@ class SmolyakInterp(object):
 
 
 # if __name__ == '__main__':
-#     d = 2
-#     mu = 3
-#     f = lambda x: np.sum(x ** 2, axis=1)
-#     f_prime = lambda x: 2 * x
-#     sg = SmolyakGrid(d, mu, np.array([-1, -1.]), np.array([1., 1.]))
+    # from grid import SmolyakGrid
+    # d = 2
+    # mu = 3
+    # f = lambda x: np.sum(x ** 2, axis=1)
+    # f_prime = lambda x: 2 * x
+    # sg = SmolyakGrid(d, mu, np.array([-1, -1.]), np.array([1., 1.]))
 
-#     f_on_grid = f(sg.grid)
+    # f_on_grid = f(sg.grid)
 
-#     si = SmolyakInterp(sg, f_on_grid)
+    # si = SmolyakInterp(sg, f_on_grid)
 
-#     np.random.seed(42)
-#     test_points = np.random.randn(100, 2)
-#     # Make sure it is bounded by -2, 2
-#     test_points = test_points/np.max(np.abs(test_points))
+    # np.random.seed(42)
+    # test_points = np.random.randn(100, 2)
+    # # Make sure it is bounded by -2, 2
+    # test_points = test_points/np.max(np.abs(test_points))
 
-#     true_vals = f(test_points)
-#     interp_vals = si.interpolate(test_points)
+    # true_vals = f(test_points)
+    # interp_vals = si.interpolate(test_points)
 
-#     mean_ad = np.mean(np.abs(interp_vals - true_vals))
-#     max_ad = np.max(np.abs(interp_vals - true_vals))
-#     min_ad = np.min(np.abs(interp_vals - true_vals))
+    # mean_ad = np.mean(np.abs(interp_vals - true_vals))
+    # max_ad = np.max(np.abs(interp_vals - true_vals))
+    # min_ad = np.min(np.abs(interp_vals - true_vals))
 
-#     print("The mean abs diff is {}\nThe max abs diff is {}\nThe min abs diff is {}"
-#           .format(mean_ad, max_ad, min_ad))
+    # msg = "The mean abs diff is {}\nThe max abs diff is {}\n"
+    # msg += "The min abs diff is {}"
+
+    # print(msg.format(mean_ad, max_ad, min_ad))
