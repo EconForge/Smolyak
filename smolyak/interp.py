@@ -31,6 +31,10 @@ class SmolyakInterp(object):
         self.f_on_grid = f_on_grid
         self.theta = find_theta(sg, self.f_on_grid)
 
+    def update_theta(self, f_on_grid):
+        self.f_on_grid = f_on_grid
+        self.theta = find_theta(self.sg, self.f_on_grid)
+
     def interpolate(self, pts, interp=True, deriv=False, deriv_th=False,
                     deriv_X=False):
         """
