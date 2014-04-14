@@ -9,5 +9,6 @@ setup(
     packages=find_packages(),
     url='https://github.com/EconForge/Smolyak.jl',
     description='Smolyak Grid interpolation.',
-    long_description=open('README.md').read()
+    long_description=open('README.md').read(),
+    test_suite = 'nose.collector'
 )
