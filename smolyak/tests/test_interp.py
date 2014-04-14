@@ -21,7 +21,7 @@ func3_prime = lambda x: np.column_stack([np.cos(x[:, 0]), -np.sin(x[:, 1])])
 msg = "mean abs diff is {}\nmax abs diff is {}\nmin abs diff is {}"
 
 
-def test_interp_2d(d, mu, f):
+def interp_2d(d, mu, f):
     lb = -2 * np.ones(d)
     ub = 2 * np.ones(d)
     sg = SmolyakGrid(d, mu, lb, ub)
@@ -46,7 +46,7 @@ def test_interp_2d(d, mu, f):
     return
 
 
-def test_interp_2d1(d, mu, f):
+def interp_2d1(d, mu, f):
     sg = SmolyakGrid(d, mu, np.array([-1, -1.]), np.array([1., 1.]))
 
     f_on_grid = f(sg.grid)
@@ -69,7 +69,7 @@ def test_interp_2d1(d, mu, f):
     return
 
 
-def test_interp2d_derivs(d, mu, f, f_prime, bds=1, verbose=True):
+def interp2d_derivs(d, mu, f, f_prime, bds=1, verbose=True):
     sg = SmolyakGrid(d, mu, -bds, bds)
 
     f_on_grid = f(sg.grid)
@@ -104,5 +104,14 @@ def test_interp2d_derivs(d, mu, f, f_prime, bds=1, verbose=True):
     # return i_vals_prime
 
 
-test_interp_2d(2, 3, func1)
-test_interp_2d1(2, 3, func1)
+
+# functions starting with test_ are
+# discovered and automatically run by nosetests
+
+def test_interp_2d():
+    
+    interp_2d(2, 3, func1)
+
+def test_interp_2d1():
+
+    interp_2d1(2, 3, func1)
