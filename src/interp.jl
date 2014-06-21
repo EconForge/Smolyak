@@ -1,7 +1,8 @@
-"""
+#=
+
 Uses the grid type from grid.jl to construct an interpolation type
 
-"""
+=#
 
 type SmolyakInterp
     SGrid::SmolyakGrid
@@ -12,6 +13,7 @@ type SmolyakInterp
         # Constructor with a grid and the value of function on the grid
 
         theta = find_theta(sg, fgrid)::Vector{Float64}
+
         return new(sg, fgrid, theta)
     end
 
@@ -36,31 +38,9 @@ end
 
 # Interpolation
 function interpolate(si::SmolyakInterp, pts::Matrix{Float64})
-    """
-    Basic interpolation.
 
-    Parameters
-    ==========
-    si : SmolyakInterp
-        Instance of SmolyakInterp type
+    # TODO: There may be a better way to do this
 
-    pts : array (float, ndim=2)
-        A 2d array of points on which to evaluate the function. Each
-        row is assumed to be a new d-dimensional point. Therefore, pts
-        must have the same number of columns as `si.SGrid.d`
-
-    Returns
-    =======
-    ipts : array(float, ndim=1)
-        The interpolated values for each point in `pts`
-
-    Notes
-    =====
-    This is a stripped down port of `dolo.SmolyakBasic.interpolate`
-
-    TODO: There may be a better way to do this
-
-    """
     # We should do some type checking
     n = size(pts, 1)
     d = size(pts, 2)
@@ -70,6 +50,7 @@ function interpolate(si::SmolyakInterp, pts::Matrix{Float64})
     cube_pts = dom2cube(pts, si.SGrid.lb, si.SGrid.ub)::Matrix{Float64}
     new_B = build_B(d, si.SGrid.mu, cube_pts, si.SGrid.pinds)::Matrix{Float64}
     ipts = (new_B * si.theta)::Vector{Float64}
+
     return ipts
 end
 

@@ -1,3 +1,9 @@
+#=
+
+Utility functions used throughout the library.
+
+=#
+
 function pmute(a::Union(Array{Float64, 1}, Array{Int64, 1}))
     # Return all unique permutations of the vector a, which must be a 1d
     # numerical array.
@@ -43,6 +49,7 @@ end
 
 
 function my_repeat(a, n)
+
     # mimics numpy.repeat
     m = size(a, 1)
     out = Array(eltype(a), n * m)
@@ -50,6 +57,7 @@ function my_repeat(a, n)
     for i=2:m
         out[(i-1)*n+1:i*n] = a[i]
     end
+
     return out
 end
 
@@ -65,7 +73,8 @@ function cartprod(arrs, out=Array(eltype(arrs[1]),
             out[k,i] = arrs[i][I[i]]
         end
     end
-    out
+
+    return out
 end
 
 
@@ -138,58 +147,7 @@ end
 ## ------------- ##
 
 function all_close(x::Array, y::Array, rtol::Float64=1.e-5, atol::Float64=1.e-8)
-    """
-    Returns True if two arrays are element-wise equal within a tolerance.
 
-    The tolerance values are positive, typically very small numbers.  The
-    relative difference (`rtol` * abs(`b`)) and the absolute difference
-    `atol` are added together to compare against the absolute difference
-    between `a` and `b`.
-
-    If either array contains one or more NaNs, False is returned.
-    Infs are treated as equal if they are in the same place and of the same
-    sign in both arrays.
-
-    Parameters
-    ----------
-    x, y : array_like
-        Input arrays to compare.
-    rtol : float
-        The relative tolerance parameter (see Notes).
-    atol : float
-        The absolute tolerance parameter (see Notes).
-
-    Returns
-    -------
-    allclose : bool
-        Returns True if the two arrays are equal within the given
-        tolerance; False otherwise.
-
-    Notes
-    -----
-    If the following equation is element-wise True, then allclose returns
-    True.
-
-     absolute(`a` - `b`) <= (`atol` + `rtol` * absolute(`b`))
-
-    The above equation is not symmetric in `a` and `b`, so that
-    `allclose(a, b)` might be different from `allclose(b, a)` in
-    some rare cases.
-
-    Examples
-    --------
-    julia> allclose([1e10,1e-7], [1.00001e10,1e-8])
-    false
-    julia> allclose([1e10,1e-8], [1.00001e10,1e-9])
-    true
-    julia> allclose([1e10,1e-8], [1.0001e10,1e-9])
-    false
-
-    References
-    ==========
-    This function, and docstring, are taken directly from numpy.allclose
-
-    """
     xinf = isinf(x)
     yinf = isinf(y)
     if any(xinf) || any(yinf)
