@@ -91,11 +91,11 @@ function cartesian(arrs; out=None)
     m = int(n / size(arrs[1], 1))
     out[:, 1] = my_repeat(arrs[1], m)
 
-    if length(arrs[2:]) > 0
+    if length(arrs[2:end]) > 0
         out_end = size(out, 2)
-        cartesian(arrs[2:], out=sub(out, 1:m, 2:out_end))
+        cartesian(arrs[2:end], out=sub(out, 1:m, 2:out_end))
         for j = 1:size(arrs[1], 1)-1
-            out[(j*m + 1):(j+1)*m, 2:] = out[1:m, 2:]
+            out[(j*m + 1):(j+1)*m, 2:end] = out[1:m, 2:end]
         end
     end
 
@@ -129,7 +129,7 @@ function comb_with_replacement(itr, r::Int)
         if is(done, true)
             return
         end
-        indicies[i:] = indicies[i] + 1
+        indicies[i:end] = indicies[i] + 1
         produce([pool[i] for i in indicies])
     end
 end
