@@ -23,16 +23,16 @@ Krueger, Dirk, and Felix Kubler. 2004. "Computing Equilibrium in OLG
     Control 28 (7) (April): 1411-1436.
 
 """
-from __future__ import division
 from operator import mul
 from itertools import product, combinations_with_replacement
 from itertools import chain
+from functools import reduce
 import numpy as np
 from scipy.linalg import lu
 import matplotlib.pyplot as plt
 import pandas as pd
 from mpl_toolkits.mplot3d import Axes3D
-from util import *
+from .util import *
 
 ## --------------- ##
 #- Building Blocks -#
@@ -145,7 +145,7 @@ def chebyvalto(x, n, kind=1.):
     ret_matrix[:, :col] = x * kind
     ret_matrix[:, col:2*col] = 2 * x * ret_matrix[:, :col] - init
 
-    for i in xrange(3, n):
+    for i in range(3, n):
         ret_matrix[:, col*(i-1): col*(i)] = 2 * x * ret_matrix[:, col*(i-2):col*(i-1)] \
                                          - ret_matrix[:, col*(i-3): col*(i-2)]
 
@@ -257,7 +257,7 @@ def a_chain(n):
     A_chain[2] = [-1., 1.]
 
     # Need a for loop to extract remaining elements
-    for seq in xrange(n, 2, -1):
+    for seq in range(n, 2, -1):
         num = Sn.size
         # Need odd indices in python because indexing starts at 0
         A_chain[seq] = tuple(Sn[range(1, num, 2)])
@@ -295,7 +295,7 @@ def phi_chain(n):
     aphi_chain[2] = [2, 3]
 
     curr_val = 4
-    for i in xrange(3, n+1):
+    for i in range(3, n+1):
         end_val = 2**(i-1) + 1
         temp = range(curr_val, end_val+1)
         aphi_chain[i] = temp
@@ -569,7 +569,7 @@ def build_B(d, mu, pts, b_inds=None, deriv=False):
 #     # compute any more.  They are multiplications of different numbers
 #     # of elements from the pieces of easy_B.
 #     if mu==2:
-#         for i in xrange(d-1):
+#         for i in range(d-1):
 
 
 #             mult_inds = np.hstack([np.arange(i+1, d), np.arange(d + (i+1), 2*d)])
@@ -592,7 +592,7 @@ def build_B(d, mu, pts, b_inds=None, deriv=False):
 #     #-----------------------------------------------------------------#
 #     #-----------------------------------------------------------------#
 
-#     # for i in xrange(2, mu+1):
+#     # for i in range(2, mu+1):
 #     #     curr_ind = i
 
 #     #     while True:
@@ -602,7 +602,7 @@ def build_B(d, mu, pts, b_inds=None, deriv=False):
 #     #         # Find which possible polynomials can be reached (lowest is 2)
 #     #         poss_inds = np.arange(2, m_i(some function of curr_ind, d, mu)+1)
 
-#     #         for dd in xrange(d-1):
+#     #         for dd in range(d-1):
 #     #             # Create range of d to be used to build the fancy index
 #     #             mult_ind = np.arange(curr_col+1, d)
 
@@ -610,7 +610,7 @@ def build_B(d, mu, pts, b_inds=None, deriv=False):
 #     #             # for every chebyshev polynomial that we need to reach with these
 #     #             # indexes
 #     #             mult_inds = np.array([])
-#     #             for tt in xrange(some condition for what is max polynomial we reach -1):
+#     #             for tt in range(some condition for what is max polynomial we reach -1):
 #     #                 mult_inds = np.hstack([mult_inds, mult_inds + (d*tt)])
 
 #     #             # this will create the column times all the stuff following it
@@ -623,7 +623,7 @@ def build_B(d, mu, pts, b_inds=None, deriv=False):
 
 #     #             while d>curr_dim and condition for continuing is met:
 #     #                 curr_dim += 1
-#     #                 for mm in xrange(curr_col + 2, d-1):
+#     #                 for mm in range(curr_col + 2, d-1):
 #     #                     for bb in mult_inds[:-1]:
 #     #                         temp2 = easy_B[:, bb*d + mm] * temp1
 #     #                         new_cols2 = temp2.shape[1]
@@ -854,8 +854,7 @@ class SmolyakGrid(object):
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d')
             ax.scatter(xs, ys, zs)
-            ax.set_title("Smolyak grid: $d=%i, \; \\mu=%i$" % (self.d,
-                                                               self.mu))
+            ax.set_title("Smolyak grid: $d={}, \; \\mu={}$".format(self.d, self.mu))
             plt.show()
         else:
             raise ValueError('Can only plot 2 or 3 dimensional problems')
