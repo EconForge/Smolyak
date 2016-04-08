@@ -64,6 +64,10 @@ function cartprod(arrs, out=Array(eltype(arrs[1]),
     return out
 end
 
+# Note the routines below are taken from Combinatorics.jl
+# Because that package does not support Julia 0.4 I have
+# included them here.  When 0.5 is released these will be 
+# removed in favor of the package. 
 immutable WithReplacementCombinations{T}
     a::T
     t::Int
