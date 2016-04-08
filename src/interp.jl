@@ -36,3 +36,21 @@ interpolate(si::SmolyakInterp, pts::AbstractMatrix) =
     interpolate!(Array(Float64, size(pts, 1)), si, pts)
 
 Base.call(si::SmolyakInterp, pts::AbstractMatrix) = interpolate(si, pts)
+
+
+function interp_withderiv(si::SmolyakInterp, pts::AbstractMatrix)
+    cube_pts = dom2cube(pts, si.grid.lb, si.grid.ub)
+    new_B, der_B = build_B_with_deriv(d, si.grid.mu, cube_pts, si.grid.pinds)
+    vals = new_B * si.coefs
+    deriv = zeros(size(pts, 1), si.grid.d)
+
+    # TODO: once we are confident that this works, add @inbounds/@simd
+    for i in 1:length(si.coefs)
+        for I in CartesianRange(size(deriv))
+            deriv[I] += der_B[I, i] * si.coefs[i]
+        end
+    end
+
+    dom2cube!(deriv, deriv, si.grid.lb, si.grid.ub)
+    vals, deriv
+end

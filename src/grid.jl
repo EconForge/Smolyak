@@ -34,7 +34,7 @@ function cheby2n{T<:Number}(x::Array{T}, n::Int, kind::Int=1)
     cheby2n!(out, x, n, kind)
 end
 
-@noinline function cheby2n!{T<:Number,N}(out::Array{T}, x::Array{T,N}, n::Int,
+function cheby2n!{T<:Number,N}(out::Array{T}, x::Array{T,N}, n::Int,
                                          kind::Int)
     if size(out) != tuple(size(x)..., n+1)
         error("out must have dimensions $(tuple(size(x)..., n+1))")
@@ -49,7 +49,7 @@ end
 
     @inbounds for i in 3:n+1
         @simd for I in R
-            out[I, i] = 2x[I] * out[I, i - 1] - out[I, i - 2]
+            out[I, i] = 2x[I] * out[I, i-1] - out[I, i-2]
         end
     end
     out
@@ -71,7 +71,6 @@ function s_n(n::Int)
 
     pts
 end
-
 
 function a_n(n::Int)
     n < 1 && error("DomainError: n must be positive")
@@ -199,7 +198,7 @@ function build_B!{T}(out::AbstractMatrix{T}, d::Int, mu::IntSorV,
     # check dimensions
     npolys = size(b_inds, 1)
     npts = size(pts, 1)
-    size(out) == (npts, npolys) || error("Out should be size $((npts, npolys))")
+    size(out) == (npts, npolys) || error("Out must have size $((npts, npolys))")
 
     # fill out with ones so tensor product below works
     fill!(out, one(T))
@@ -209,16 +208,73 @@ function build_B!{T}(out::AbstractMatrix{T}, d::Int, mu::IntSorV,
 
     @inbounds for ind in 1:npolys, k in 1:d
         b = b_inds[ind, k]
-        for i in 1:npts
+        @simd for i in 1:npts
             out[i, ind] *= Ts[i, k, b]
         end
     end
 
-    return out
+    return out, Ts
 end
 
 build_B(d::Int, mu::IntSorV, pts::Matrix{Float64}, b_inds::Matrix{Int64}) =
-    build_B!(Array(Float64, size(pts, 1), size(b_inds, 1)), d, mu, pts, b_inds)
+    build_B!(Array(Float64, size(pts, 1), size(b_inds, 1)), d, mu, pts, b_inds)[1]
+
+# Build B-matrix
+function build_B_with_deriv!{T}(out_B::AbstractMatrix,
+                                out_dB::AbstractArray{T,3},
+                                d::Int, mu::IntSorV,
+                                pts::Matrix{Float64}, b_inds::Matrix{Int64})
+    # check dimensions
+    npolys = size(b_inds, 1)
+    npts = size(pts, 1)
+
+    if size(out_dB) != (npts, d, npolys)
+        error("out_B must have size $((npts, d, npolys))")
+    end
+
+    # fill out_B and get Ts back
+    _, Ts = build_B!(out_B, d, mu, pts, b_inds)
+
+    # now work on computing out_dB
+    Us = cheby2n(pts, m_i(maximum(mu) + 1), 2)
+    Us = cat(3, zeros(npts, d, 1), Us)
+
+    for i in 1:size(Us, 3)
+        for I in CartesianRange((npts, d))
+            Us[I, i] *= (i-1)
+        end
+    end
+
+    fill!(out_dB, one(T))
+
+    # TODO: Not sure about this...
+    for ind in 1:npolys
+        for dim in 1:d
+            for k in 1:d
+                b = b_inds[ind, k]
+                if dim != k
+                    for i in 1:npts
+                        out_dB[i, dim, ind] *= Ts[i, k, b]
+                    end
+                else
+                    for i in 1:npts
+                        out_dB[i, dim, ind] *= Us[i, k, b]
+                    end
+                end
+            end
+        end
+    end
+
+    return out_B, out_dB, Ts, Us
+end
+
+function build_B_with_deriv(d::Int, mu::IntSorV, pts::Matrix{Float64},
+                            b_inds::Matrix{Int64})
+    out_B = Array(Float64, size(pts, 1), size(b_inds, 1))
+    out_dB = Array(Float64, size(pts, 1), d, size(b_inds, 1))
+    build_B_with_deriv!(out_B, out_dB, d, mu, pts, b_inds)
+    out_B, out_dB
+end
 
 function dom2cube!(out::AbstractMatrix, pts::AbstractMatrix,
                    lb::AbstractVector, ub::AbstractVector)
