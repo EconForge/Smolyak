@@ -1,10 +1,9 @@
-require("../src/grid.jl")
-require("../src/interp.jl")
+using Smolyak
 
 
 const verbose = true
 const print_str = "mean abs diff: %.3e\nmax abs diff: %.3e\nmin abs diff: %.3e"
-@eval print_func(x,y,z) = @printf($print_str, x, y, z)
+@eval print_func(x, y, z) = @printf($print_str, x, y, z)
 
 # L2-norm squared
 f1(x) = squeeze(sum(x .^ 2, 2), 2)
@@ -28,7 +27,7 @@ function test_interp2d_derivs(d::Int, mu::Int, f::Function, f_prime::Function, b
 
     true_vals = f(test_points)
     true_vals_prime = f_prime(test_points)
-    i_vals = interpolate(si, test_points)
+    i_vals = si(test_points)
 
     mean_ad = mean(abs(i_vals - true_vals))
     max_ad = maximum(abs(i_vals - true_vals))
@@ -45,5 +44,3 @@ end
 test_interp2d_derivs(15, 3, f2, f2_p, -2)
 
 @time test_interp2d_derivs(15, 3, f2, f2_p, -2)
-
-

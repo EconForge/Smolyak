@@ -4,7 +4,7 @@ Utility functions used throughout the library.
 
 =#
 
-function pmute(a::Union(Array{Float64, 1}, Array{Int64, 1}))
+function pmute(a::AbstractVector)
     # Return all unique permutations of the vector a, which must be a 1d
     # numerical array.
 
@@ -66,74 +66,56 @@ function cartprod(arrs, out=Array(eltype(arrs[1]),
                                   prod([length(a) for a in arrs]),
                                   length(arrs)))
     sz = Int[length(a) for a in arrs]
-    narrs = length(arrs)
-    Cartesian.@forcartesian I sz begin
-        k = sub2ind(sz, I)
-        for i = 1:narrs
-            out[k,i] = arrs[i][I[i]]
+    k = 1
+    for v in product(arrs...)
+        i = 1
+        for el in v
+            out[k, i] = el
+            i += 1
         end
+        k += 1
     end
 
     return out
 end
 
-
-function cartesian(arrs; out=None)
-    called=1
-    dtype = eltype(arrs[1])
-
-    n = prod([size(i, 1) for i in arrs])::Int
-
-    if is(out, None)
-        out = Array(dtype, n, length(arrs))
-    end
-
-    m = int(n / size(arrs[1], 1))
-    out[:, 1] = my_repeat(arrs[1], m)
-
-    if length(arrs[2:end]) > 0
-        out_end = size(out, 2)
-        cartesian(arrs[2:end], out=sub(out, 1:m, 2:out_end))
-        for j = 1:size(arrs[1], 1)-1
-            out[(j*m + 1):(j+1)*m, 2:end] = out[1:m, 2:end]
-        end
-    end
-
-    return out
+immutable WithReplacementCombinations{T}
+    a::T
+    t::Int
 end
 
+Base.eltype{T}(::Type{WithReplacementCombinations{T}}) = Vector{eltype(T)}
 
-function comb_with_replacement(itr, r::Int)
-    # Combinations with replacement. From algorithm in python docs.
+Base.length(c::WithReplacementCombinations) = binomial(length(c.a)+c.t-1, c.t)
 
-    pool = tuple(itr...)
-    n = length(pool)::Int
-    indicies = ones(Int64, r)
-    produce([pool[i] for i in indicies])
+"generate all combinations with replacement of size t from an array a."
+with_replacement_combinations(a, t::Integer) = WithReplacementCombinations(a, t)
 
-    # NOTE: need to define done and i here so they are available in all parts of
-    #       the while loop
-    done = false
-    i = 0
-
-    while true
-        for i=r:-1:1
-            if indicies[i] != n
-                done = false
+Base.start(c::WithReplacementCombinations) = [1 for i in 1:c.t]
+function Base.next(c::WithReplacementCombinations, s)
+    n = length(c.a)
+    t = c.t
+    comb = [c.a[si] for si in s]
+    if t > 0
+        s = copy(s)
+        changed = false
+        for i in t:-1:1
+            if s[i] < n
+                s[i] += 1
+                for j in (i+1):t
+                    s[j] = s[i]
+                end
+                changed = true
                 break
-            else
-                done = true
             end
         end
-
-        if is(done, true)
-            return
-        end
-        indicies[i:end] = indicies[i] + 1
-        produce([pool[i] for i in indicies])
+        !changed && (s[1] = n+1)
+    else
+        s = [n+1]
     end
+    (comb, s)
 end
-
+Base.done(c::WithReplacementCombinations, s) = !isempty(s) && s[1] > length(c.a) || c.t < 0
 
 function tensordot{T, S, N}(a::Array{T, N}, b::Array{S, N}, axes::Array{Int, 1})
     if length(axes) != 2
@@ -165,4 +147,3 @@ function all_close(x::Array, y::Array, rtol::Float64=1.e-5, atol::Float64=1.e-8)
 
     return all(.<=(abs(x - y), atol + rtol * abs(y)))
 end
-

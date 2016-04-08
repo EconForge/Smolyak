@@ -1,12 +1,9 @@
 module Smolyak
 
-import Cartesian
-# import PyPlot
-import Base.show
+using Iterators
 
-
-export SmolyakGrid, build_B, build_grid, #=plot, =#  # grid.jl
-       SmolyakInterp, interpolate, find_theta, update_theta  # interp.jl
+export SmolyakGrid, build_B, build_B!, build_grid,
+       SmolyakInterp, interpolate, find_theta, update_theta
 
 include("util.jl")
 include("grid.jl")

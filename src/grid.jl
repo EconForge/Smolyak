@@ -1,20 +1,11 @@
 #=
 
-This file contains a class that builds a Smolyak Grid.  The hope is that
-it will eventually contain the interpolation routines necessary so that
-the given some data, this class can build a grid and use the Chebychev
-polynomials to interpolate and approximate the data.
-
-Method based on Judd, Maliar, Maliar, Valero 2013 (W.P)
-
-Authors
-=======
-
-- Chase Coleman (ccoleman@stern.nyu.edu)
-- Spencer Lyon (slyon@stern.nyu.edu)
+Chase Coleman (ccoleman@stern.nyu.edu)
+Spencer Lyon (spencer.lyon@stern.nyu.edu)
 
 References
-==========
+----------
+
 Judd, Kenneth L, Lilia Maliar, Serguei Maliar, and Rafael Valero. 2013.
     "Smolyak Method for Solving Dynamic Economic Models: Lagrange
     Interpolation, Anisotropic Grid and Adaptive Domain".
@@ -25,149 +16,110 @@ Krueger, Dirk, and Felix Kubler. 2004. "Computing Equilibrium in OLG
 
 =#
 
-## --------------- ##
-#- Building Blocks -#
-## --------------- ##
-
 # union type to handle isotropic/anisotropic mu parameters
-IntSorV = Union(Int, Vector{Int})
+typealias IntSorV Union{Int, Vector{Int}}
 
-function num_grid_pts(d::Int, mu::Int)
+num_grid_points(d::Int, mu::Int) =
+    mu == 1 ? 2d - 1 :
+    mu == 2 ? Int(1 + 4d + 4d*(d-1)/2 ):
+    mu == 3 ? Int(1 + 8d + 12d*(d-1)/2 + 8d*(d-1)*(d-2)/6) :
+    error("We only know the number of grid points for mu ∈ [1, 2, 3]")
 
-    if mu == 1
-        return int(2d - 1)
-    elseif mu == 2
-        return int(1 + 4d + 4d*(d-1)/2)
-    elseif mu == 3
-        return int(1 + 8d + 12d*(d-1)/2 + 8d*(d-1)*(d-2)/6)
-    else
-        error("We only know the number of grid points for mu \\in [1, 2, 3]")
-    end
+m_i(i::Int) = i < 0 ?  error("DomainError: i must be positive") :
+              i == 0 ? 0 :
+              i == 1 ? 1 : 2^(i - 1) + 1
+
+function cheby2n{T<:Number}(x::Array{T}, n::Int, kind::Int=1)
+    out = Array(T, size(x)..., n+1)
+    cheby2n!(out, x, n, kind)
 end
 
-
-function m_i(i::Int)
-
-    if i < 0
-        error("DomainError: i must be positive")
-    elseif i == 0
-        return 0
-    elseif i == 1
-        return 1
-    else
-        return 2^(i - 1) + 1
-    end
-end
-
-
-function cheby2n{T<:Number}(x::Array{T, 1}, n::Int; kind::Real=1)
-
-    dim = length(x)::Int64
-    results = Array(T, dim, n + 1)::Array{Float64, 2}
-    results[:, 1] = 1.
-    results[:, 2] = kind * x
-
-    for i=3:n+1
-        results[:, i] = 2x .* results[:, i - 1] - results[:, i - 2]
+@noinline function cheby2n!{T<:Number,N}(out::Array{T}, x::Array{T,N}, n::Int,
+                                         kind::Int)
+    if size(out) != tuple(size(x)..., n+1)
+        error("out must have dimensions $(tuple(size(x)..., n+1))")
     end
 
-    return results
-end
-
-
-function cheby2n{T<:Number}(x::Array{T, 2}, n::Int; kind::Real=1)
-    #=
-    Evaluates the first n+1 Chebyshev polynomials of the 'kind' kind at x
-    NOTE: This will only work when kind = 1 or kind = 2
-    NOTE: We evaluate the first n+1, with the first dimension being all 1's
-    =#
-
-    dim = size(x)
-    results = Array(T, dim..., n + 1)
-    results[:, :, 1] = 1.
-    results[:, :, 2] = kind * x
-    for i=3:n+1
-        results[:, :, i] = 2x .* results[:, :, i - 1] - results[:, :, i - 2]
+    R = CartesianRange(size(x))
+    # fill first element with ones
+    @inbounds @simd for I in R
+        out[I, 1] = one(T)
+        out[I, 2] = kind*x[I]
     end
 
-    return results
+    @inbounds for i in 3:n+1
+        @simd for I in R
+            out[I, i] = 2x[I] * out[I, i - 1] - out[I, i - 2]
+        end
+    end
+    out
 end
-
 
 function s_n(n::Int)
-    if n < 1
-        error("DomainError: n must be positive")
-    end
+    n < 1 && error("DomainError: n must be positive")
 
     if n == 1
-        return [0.]
+        return [0.0]
     end
 
     m = m_i(n)
-    j = [1:m]
-    pts = cos(pi * (j - 1.) / (m - 1))::Array{Float64, 1}
-    for i = 1:size(pts, 1)
+    j = 1:m
+    pts = cos(pi * (j - 1.0) / (m - 1.0))
+    @inbounds @simd for i in eachindex(pts)
         pts[i] = abs(pts[i]) < 1e-12 ? 0.0 : pts[i]
     end
 
-    return pts
+    pts
 end
 
 
 function a_n(n::Int)
-
-    if n < 1
-        error("DomainError: n must be positive")
-    end
+    n < 1 && error("DomainError: n must be positive")
 
     if n == 1
-        return [0.]
+        return [0.0]
     elseif n == 2
-        return [-1., 1.]
+        return [-1.0, 1.0]
     end
 
     sn = s_n(n)
 
-    return sn[[2:2:size(sn, 1)]]
+    sn[2:2:end]
 end
 
-
 function a_chain(n::Int)
-
     sn = s_n(n)
-    a = Dict{Int, Array{Float64, 1}}()
-    sizehint(a, n)
+    a = Dict{Int,Vector{Float64}}()
+    sizehint!(a, n)
 
     # These are constant and don't follow the pattern.
-    a[1] = [0.]
-    a[2] = [-1., 1.]
+    a[1] = [0.0]
+    a[2] = [-1.0, 1.0]
 
     for i=n:-1:3
         # push!(a, sn[[2:2:size(sn, 1)]])
-        a[i] = sn[[2:2:size(sn, 1)]]
-        sn = sn[[1:2:size(sn, 1)]]
+        a[i] = sn[2:2:end]
+        sn = sn[1:2:end]
     end
 
-    return a
+    a
 end
 
-
 function phi_chain(n::Int)
-
     max_ind = m_i(n)
-    phi = Dict{Int, Array{Int64, 1}}()
-    phi[1] = [1]
-    phi[2] = [2, 3]
+    phi = Dict{Int, UnitRange{Int64}}()
+    phi[1] = 1:1
+    phi[2] = 2:3
     low_ind = 4  # current lower index
+
     for i = 3:n
         high_ind = m_i(i)
-        phi[i] = [low_ind:high_ind]
+        phi[i] = low_ind:high_ind
         low_ind = high_ind + 1
     end
 
-    return phi
+    phi
 end
-
 
 ## ---------------------- ##
 #- Construction Utilities -#
@@ -176,21 +128,21 @@ end
 # Isotropic inds
 function smol_inds(d::Int, mu::Int)
 
-    p_vals = [1:mu + 1]
+    p_vals = 1:(mu+1)
 
     # PERF: size_hint here if it is slow
-    poss_inds = {}
+    poss_inds = Vector{Int}[]
 
-    for el in Task(()-> comb_with_replacement(p_vals, d))
+    for el in with_replacement_combinations(p_vals, d)
         if d < sum(el) <= d + mu
             push!(poss_inds, el)
         end
     end
 
     # PERF: size_hint here if it is slow
-    true_inds = Any[ones(Int64, d)]  # we will always have (1, 1, ...,  1)
+    true_inds = Vector{Int}[ones(Int64, d)]  # we will always have (1, 1, ...,  1)
     for val in poss_inds
-        for el in Task(()->pmute(val))
+        for el in @task pmute(val)
             push!(true_inds, el)
         end
     end
@@ -198,34 +150,29 @@ function smol_inds(d::Int, mu::Int)
     return true_inds
 end
 
-
 # Ansotropic inds
-function smol_inds(d::Int, mu::Array{Int, 1})
+function smol_inds(d::Int, mu::Vector{Int})
     # Compute indices needed for anisotropic smolyak grid given number of
     # dimensions d and a vector of mu parameters mu
 
-    if length(mu) != d
-        error("ValueError: mu must have d elements.")
-    end
+    length(mu) != d &&  error("ValueError: mu must have d elements.")
 
     mu_max = maximum(mu)
     mup1 = mu + 1
 
-    p_vals = [1:mu_max + 1]
+    p_vals = 1:(mu_max+1)
 
-    # PERF: size_hint here if it is slow
-    poss_inds = {}
+    poss_inds = Vector{Int}[]
 
-    for el in Task(()-> comb_with_replacement(p_vals, d))
+    for el in with_replacement_combinations(p_vals, d)
         if d < sum(el) <= d + mu_max
             push!(poss_inds, el)
         end
     end
 
-    # PERF: size_hint here if it is slow
-    true_inds = Any[ones(Int64, d)]
+    true_inds = Vector{Int}[ones(Int64, d)]
     for val in poss_inds
-        for el in Task(()->pmute(val))
+        for el in @task pmute(val)
             if all(el .<= mup1)
                 push!(true_inds, el)
             end
@@ -235,124 +182,82 @@ function smol_inds(d::Int, mu::Array{Int, 1})
     return true_inds
 end
 
-
-function poly_inds(d::Int, mu::IntSorV, inds::Array{Any}={})
-
-    if length(inds) == 0
-        inds = smol_inds(d, mu)
-    end
+function poly_inds(d::Int, mu::IntSorV, inds::Vector{Vector{Int}}=smol_inds(d, mu))
     phi_n = phi_chain(maximum(mu) + 1)
-
-    return vcat([ cartprod([phi_n[i] for i in el]) for el in inds]...)
+    vcat([cartprod([phi_n[i] for i in el]) for el in inds]...)::Matrix{Int}
 end
-
 
 # Build grid
-function build_grid(d::Int, mu::IntSorV, inds::Array{Any}={})
-
-    if length(inds) == 0
-        inds = smol_inds(d, mu)
-    end
+function build_grid(d::Int, mu::IntSorV, inds::Vector{Vector{Int}}=smol_inds(d, mu))
     An = a_chain(maximum(mu) + 1)  # use maximum in case mu is Vector
-
-    return vcat([ cartprod([An[i] for i in el]) for el in inds]...)
+    vcat([cartprod([An[i] for i in el]) for el in inds]...)::Matrix{Float64}
 end
 
-
 # Build B-matrix
-function build_B(d::Int, mu::IntSorV, pts::Array{Float64, 2},
-                 b_inds::Array{Int64, 2})
+function build_B!(out::AbstractMatrix, d::Int, mu::IntSorV,
+                  pts::Matrix{Float64}, b_inds::Matrix{Int64})
 
-    Ts = cheby2n(pts, m_i(maximum(mu) + 1))::Array{Float64, 3}
-    npolys = size(b_inds, 1)::Int64
-    npts = size(pts, 1)::Int64
-    B = ones(npts, npolys)::Array{Float64, 2}
-    for ind = 1:npolys
-        for k in 1:d
-            b = b_inds[ind,k]::Int64
-            for i in 1:npts
-                @inbounds B[i,ind] *= Ts[i, k, b]
-            end
+    npolys = size(b_inds, 1)
+    npts = size(pts, 1)
+    size(out) == (npts, npolys) || error("Out should be size $((npts, npolys))")
+    Ts = cheby2n(pts, m_i(maximum(mu) + 1))
+
+    @inbounds for ind in 1:npolys, k in 1:d
+        b = b_inds[ind, k]
+        for i in 1:npts
+            out[i, ind] *= Ts[i, k, b]
         end
     end
 
-    return B
+    return out
 end
 
+build_B(d::Int, mu::IntSorV, pts::Matrix{Float64}, b_inds::Matrix{Int64}) =
+    build_B!(ones(size(pts, 1), size(b_inds, 1)), d, mu, pts, b_inds)
 
-function dom2cube(pts::Matrix{Float64}, lb::Vector{Float64}, ub::Vector{Float64})
-
-    dim = size(pts, 2)::Int64
+function dom2cube(pts::AbstractMatrix, lb::AbstractVector, ub::AbstractVector)
     centers = lb + (ub - lb)./2
     radii = (ub - lb)./2
     cube_points = (pts .- centers')./radii'
 
-    return cube_points
+    cube_points
 end
 
-
-function cube2dom(pts::Matrix{Float64}, lb::Vector{Float64}, ub::Vector{Float64})
-
-    dim = size(pts, 2)::Int64
+function cube2dom(pts::AbstractMatrix, lb::AbstractVector, ub::AbstractVector)
     centers = lb + (ub - lb)./2
     radii = (ub - lb)./2
     dom_points = centers' .+ pts.*radii'
 
-    return dom_points
+    dom_points
 end
-
 
 ## ----------------- ##
 #- Type: SmolyakGrid -#
 ## ----------------- ##
 
-
 ### type SmolyakGrid
-type SmolyakGrid
+# TODO: decide if we should keep B or sparse(B)
+type SmolyakGrid{Tmu<:IntSorV,Tlb<:Number,Tub<:Number}
     d::Int  # number of dimensions
-    mu::IntSorV  # density. Int or d element vector of Int
-    lb::Array{Float64, 1} # This is the lower bound for the grid (the domain)
-    ub::Array{Float64, 1} # This is the upper bound for the grid (the domain)
+    mu::Tmu  # density. Int or d element vector of Int
+    lb::Vector{Tlb} # This is the lower bound for the grid (the domain)
+    ub::Vector{Tub} # This is the upper bound for the grid (the domain)
     cube_grid::Matrix{Float64}  # Smolyak grid on [-1, 1]^d
     grid::Matrix{Float64} # Smolyak grid on original domain
-    inds::Array{Any, 1}  # Smolyak indices
+    inds::Vector{Vector{Int}}  # Smolyak indices
     pinds::Matrix{Int64}  # Polynomial indices
     B::Matrix{Float64}  # matrix representing interpoland
-    B_fact::LU{Float64}  # LU(copy(B)) -- LU factorization of B
+    B_fact::Base.LinAlg.LU{Float64,Matrix{Float64}}  # LU factorization of B
 
-    # Isotropic constructor
-    function SmolyakGrid(d::Int, mu::Int, lb::Array{Float64, 1}=ones(d).*-1,
-                         ub::Array{Float64, 1}=ones(d))
-        if d < 2
-            error("You passed d = $d. d must be greater than 1")
-        end
-        if mu < 1
-            error("You passed mu = $mu. mu must be greater than 1")
-        end
-
-        inds = smol_inds(d, mu)
-        pinds = poly_inds(d, mu, inds)
-        cube_grid = build_grid(d, mu, inds)
-        grid = cube2dom(cube_grid, lb, ub)
-        B = build_B(d, mu, cube_grid, pinds)
-        B_fact = lufact(B)
-
-        new(d, mu, lb, ub, cube_grid, grid, inds, pinds, B, B_fact)
-    end
-
-    # Anisotropic constructor
-    function SmolyakGrid(d::Int, mu::Array{Int, 1},
-                         lb::Array{Float64, 1}=ones(d).*-1,
-                         ub::Array{Float64, 1}=ones(d))
-        if d < 2
-            error("You passed d = $d. d must be greater than 1")
-        end
-        if any(mu .< 1)
-            error("You passed mu = $mu. each element must be greater than 1")
-        end
-
-        if length(mu) != d
-            error("mu must have d elements. It has $(length(mu))")
+    function SmolyakGrid(d::Int, mu::IntSorV, lb::Vector=-ones(d),
+                         ub::Vector=ones(d))
+        d < 2 && error("You passed d = $d. d must be greater than 1")
+        mu < 1 && error("You passed mu = $mu. mu must be greater than 1")
+        if length(mu) > 1
+            # working on building an anisotropic grid
+            if length(mu) != d
+                error("mu must have d elements. It has $(length(mu))")
+            end
         end
 
         inds = smol_inds(d, mu)
@@ -371,25 +276,30 @@ type SmolyakGrid
     end
 end
 
-
-function SmolyakGrid(d::Int, mu::IntSorV, lb::Real, ub::Real)
-    lb = ones(d) * lb
-    ub = ones(d) * ub
-    return SmolyakGrid(d, mu, lb, ub)
+# outer constructor to infer types
+function SmolyakGrid{Tmu<:IntSorV,Tlb<:Number,Tub<:Number}(d::Int,
+                                                           mu::Tmu,
+                                                           lb::Vector{Tlb}=-ones(d),
+                                                           ub::Vector{Tub}=ones(d))
+    SmolyakGrid{Tmu,Tlb,Tub}(d, mu, lb, ub)
 end
 
+function SmolyakGrid(d::Int, mu::IntSorV, lb::Number, ub::Number)
+    lb = fill(lb, d)
+    ub = fill(ub, d)
+    SmolyakGrid(d, mu, lb, ub)
+end
 
-function SmolyakGrid(d::Int, mu::IntSorV, lub::Real)
+function SmolyakGrid(d::Int, mu::IntSorV, lub::Number)
     lub = abs(lub)
-    lb = - ones(d) * lub
-    ub = ones(d) * lub
-    return SmolyakGrid(d, mu, lb, ub)
+    lb = fill(-lub, d)
+    ub = fill(lub, d)
+    SmolyakGrid(d, mu, lb, ub)
 end
 
-
-function show(io::IO, sg::SmolyakGrid)
+function Base.show(io::IO, sg::SmolyakGrid)
     npoints = size(sg.cube_grid, 1)
-    non_zero_pts = nnz(sg.B)
+    non_zero_pts = countnz(sg.B)
     pct_non_zero = (non_zero_pts / (npoints ^ 2)) * 100
     if isa(sg.mu, Array)
         mu_str = replace(strip(string(sg.mu)), '\n', " x ")
