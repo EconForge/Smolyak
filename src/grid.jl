@@ -194,12 +194,17 @@ function build_grid(d::Int, mu::IntSorV, inds::Vector{Vector{Int}}=smol_inds(d, 
 end
 
 # Build B-matrix
-function build_B!(out::AbstractMatrix, d::Int, mu::IntSorV,
-                  pts::Matrix{Float64}, b_inds::Matrix{Int64})
-
+function build_B!{T}(out::AbstractMatrix{T}, d::Int, mu::IntSorV,
+                     pts::Matrix{Float64}, b_inds::Matrix{Int64})
+    # check dimensions
     npolys = size(b_inds, 1)
     npts = size(pts, 1)
     size(out) == (npts, npolys) || error("Out should be size $((npts, npolys))")
+
+    # fill out with ones so tensor product below works
+    fill!(out, one(T))
+
+    # compute all the chebyshev polynomials we'll need
     Ts = cheby2n(pts, m_i(maximum(mu) + 1))
 
     @inbounds for ind in 1:npolys, k in 1:d
@@ -213,22 +218,48 @@ function build_B!(out::AbstractMatrix, d::Int, mu::IntSorV,
 end
 
 build_B(d::Int, mu::IntSorV, pts::Matrix{Float64}, b_inds::Matrix{Int64}) =
-    build_B!(ones(size(pts, 1), size(b_inds, 1)), d, mu, pts, b_inds)
+    build_B!(Array(Float64, size(pts, 1), size(b_inds, 1)), d, mu, pts, b_inds)
 
-function dom2cube(pts::AbstractMatrix, lb::AbstractVector, ub::AbstractVector)
-    centers = lb + (ub - lb)./2
-    radii = (ub - lb)./2
-    cube_points = (pts .- centers')./radii'
+function dom2cube!(out::AbstractMatrix, pts::AbstractMatrix,
+                   lb::AbstractVector, ub::AbstractVector)
+    d = length(lb)
+    n = size(pts, 1)
 
-    cube_points
+    size(out) == (n, d) || error("out should be $((n, d))")
+
+    @inbounds for i_d in 1:d
+        center = lb[i_d] + (ub[i_d] - lb[i_d])/2
+        radius = (ub[i_d] - lb[i_d])/2
+        @simd for i_n in 1:n
+            out[i_n, i_d] = (pts[i_n, i_d] - center)/radius
+        end
+    end
+
+    out
 end
 
-function cube2dom(pts::AbstractMatrix, lb::AbstractVector, ub::AbstractVector)
-    centers = lb + (ub - lb)./2
-    radii = (ub - lb)./2
-    dom_points = centers' .+ pts.*radii'
+function cube2dom!(out::AbstractMatrix, pts::AbstractMatrix,
+                   lb::AbstractVector, ub::AbstractVector)
+    d = length(lb)
+    n = size(pts, 1)
 
-    dom_points
+    size(out) == (n, d) || error("out should be $((n, d))")
+
+    @inbounds for i_d in 1:d
+        center = lb[i_d] + (ub[i_d] - lb[i_d])/2
+        radius = (ub[i_d] - lb[i_d])/2
+        @simd for i_n in 1:n
+            out[i_n, i_d] = center + pts[i_n, i_d]*radius
+        end
+    end
+
+    out
+end
+
+for f in [:dom2cube!, :cube2dom!]
+    no_bang = symbol(string(f)[1:end-1])
+    @eval $(no_bang){T}(pts::AbstractMatrix{T}, lb::AbstractVector, ub::AbstractVector) =
+        $(f)(Array(T, size(pts, 1), length(lb)), pts, lb, ub)
 end
 
 ## ----------------- ##

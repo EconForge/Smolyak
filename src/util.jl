@@ -47,21 +47,6 @@ function pmute(a::AbstractVector)
     end
 end
 
-
-function my_repeat(a, n)
-
-    # mimics numpy.repeat
-    m = size(a, 1)
-    out = Array(eltype(a), n * m)
-    out[1:n] = a[1]
-    for i=2:m
-        out[(i-1)*n+1:i*n] = a[i]
-    end
-
-    return out
-end
-
-
 function cartprod(arrs, out=Array(eltype(arrs[1]),
                                   prod([length(a) for a in arrs]),
                                   length(arrs)))
@@ -115,35 +100,5 @@ function Base.next(c::WithReplacementCombinations, s)
     end
     (comb, s)
 end
-Base.done(c::WithReplacementCombinations, s) = !isempty(s) && s[1] > length(c.a) || c.t < 0
-
-function tensordot{T, S, N}(a::Array{T, N}, b::Array{S, N}, axes::Array{Int, 1})
-    if length(axes) != 2
-        error("Haven't written this one yet")
-    end
-    a, b = axes
-end
-
-## ------------- ##
-#- Testing Tools -#
-## ------------- ##
-
-function all_close(x::Array, y::Array, rtol::Float64=1.e-5, atol::Float64=1.e-8)
-
-    xinf = isinf(x)
-    yinf = isinf(y)
-    if any(xinf) || any(yinf)
-        if !all(xinf .== yinf)
-            return false
-        end
-
-        if !all(x[xinf] .== y[yinf])
-            return false
-        end
-
-        x = x[~xinf]
-        y = y[~xinf]
-    end
-
-    return all(.<=(abs(x - y), atol + rtol * abs(y)))
-end
+Base.done(c::WithReplacementCombinations, s) =
+    !isempty(s) && s[1] > length(c.a) || c.t < 0

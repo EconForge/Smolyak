@@ -16,16 +16,23 @@ update_coefs!(si::SmolyakInterp, f_on_grid) =
 
 
 # Interpolation
-function interpolate(si::SmolyakInterp, pts::AbstractMatrix)
-    # We should do some type checking
-    n = size(pts, 1)
+function interpolate!(out::AbstractVector, new_B::AbstractMatrix,
+                      si::SmolyakInterp, pts::AbstractMatrix)
     d = size(pts, 2)
 
-    @assert d == si.grid.d # check number of dimensions
+    d != si.grid.d && error("pts should have $d columns")
 
     cube_pts = dom2cube(pts, si.grid.lb, si.grid.ub)
-    new_B = build_B(d, si.grid.mu, cube_pts, si.grid.pinds)
-    new_B * si.coefs
+    build_B!(new_B, d, si.grid.mu, cube_pts, si.grid.pinds)
+    A_mul_B!(out, new_B, si.coefs)
 end
+
+function interpolate!(out::AbstractVector, si::SmolyakInterp, pts::AbstractMatrix)
+    new_B = ones(size(pts, 1), size(si.grid.pinds, 1))
+    interpolate!(out, new_B, si, pts)
+end
+
+interpolate(si::SmolyakInterp, pts::AbstractMatrix) =
+    interpolate!(Array(Float64, size(pts, 1)), si, pts)
 
 Base.call(si::SmolyakInterp, pts::AbstractMatrix) = interpolate(si, pts)
